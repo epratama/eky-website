@@ -36,20 +36,8 @@
   ],
   "experience": [
     {
-      "company": "Internetrix",
-      "role": "Software Engineer (Internship)",
-      "period": "November 2011 – January 2012",
-      "location": "Wollongong, Australia",
-      "description": "Agency-based internship working with SilverStripe CMS, MySQL, and the full software development lifecycle under senior mentorship.",
-      "highlights": [
-        "Developed core web development skills with SilverStripe CMS and MySQL under mentorship of senior developers and project managers",
-        "Gained hands-on exposure to the full SDLC in an agency setting — requirements gathering, development, and testing",
-        "Utilized SVN for source code version control and collaborative team development"
-      ]
-    },
-    {
       "company": "Swift Digital",
-      "role": "Senior Software Engineer",
+      "role": "Technical Lead & Senior Software Engineer",
       "period": "October 2013 – Present",
       "location": "Sydney, Australia",
       "description": "Swift Digital is a SaaS platform serving clients across government, financial services, and other sectors, providing marketing automation across the full event lifecycle.",
@@ -76,6 +64,18 @@
         "Contributed to successive database migrations: MySQL → RDS MySQL → Aurora → Aurora Serverless → Aurora Serverless v2",
         "Main contributor on PHP runtime migrations (PHP 5→7, 7→8) using GitHub Copilot for acceleration",
         "Drove platform-wide UI migration from custom HTML/CSS to Bootstrap"
+      ]
+    },
+    {
+      "company": "Internetrix",
+      "role": "Software Engineer (Internship)",
+      "period": "November 2011 – January 2012",
+      "location": "Wollongong, Australia",
+      "description": "Agency-based internship working with SilverStripe CMS, MySQL, and the full software development lifecycle under senior mentorship.",
+      "highlights": [
+        "Developed core web development skills with SilverStripe CMS and MySQL under mentorship of senior developers and project managers",
+        "Gained hands-on exposure to the full SDLC in an agency setting — requirements gathering, development, and testing",
+        "Utilized SVN for source code version control and collaborative team development"
       ]
     }
   ],

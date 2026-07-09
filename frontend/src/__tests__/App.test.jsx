@@ -24,4 +24,13 @@ describe('App', () => {
     const matches = screen.getAllByText('Technical Lead & Senior Software Engineer')
     expect(matches.length).toBeGreaterThanOrEqual(2)
   })
+
+  it('renders experience entries in descending chronological order', () => {
+    render(<App />)
+    const section = document.getElementById('experience')
+    const html = section.innerHTML
+    const swiftPos = html.indexOf('Swift Digital')
+    const internetrixPos = html.indexOf('Internetrix')
+    expect(swiftPos).toBeLessThan(internetrixPos)
+  })
 })
