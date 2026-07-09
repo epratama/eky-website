@@ -63,7 +63,41 @@ else
   echo "Custom domain (optional — leave empty to skip):"
   read -p "Domain name: " DOMAIN_NAME
   if [ -n "$DOMAIN_NAME" ]; then
-    read -p "Certificate ARN (us-east-1): " CERT_ARN
+    # Search for existing certificate for this domain
+    if [ -z "$CERT_ARN" ]; then
+      echo "Searching for existing certificate for $DOMAIN_NAME..."
+      EXISTING_CERTS=$(aws acm list-certificates \
+        --region us-east-1 \
+        --certificate-statuses ISSUED PENDING_VALIDATION \
+        --query "CertificateSummaryList[?DomainName=='$DOMAIN_NAME'].[CertificateArn,DomainName,Status]" \
+        --output text 2>/dev/null)
+      if [ -n "$EXISTING_CERTS" ]; then
+        ACM_ARN=$(echo "$EXISTING_CERTS" | awk '{print $1}')
+        ACM_STATUS=$(echo "$EXISTING_CERTS" | awk '{print $NF}')
+        if [ "$ACM_STATUS" = "ISSUED" ]; then
+          echo "Found issued certificate: $ACM_ARN"
+          echo "Using existing certificate."
+          CERT_ARN="$ACM_ARN"
+        elif [ "$ACM_STATUS" = "PENDING_VALIDATION" ]; then
+          echo "Certificate is still pending validation: $ACM_ARN"
+          echo ""
+          echo "DNS validation records:"
+          aws acm describe-certificate \
+            --certificate-arn "$ACM_ARN" \
+            --query 'Certificate.DomainValidationOptions[*].{Domain:DomainName,Name:ResourceRecord.Name,Type:ResourceRecord.Type,Value:ResourceRecord.Value}' \
+            --region us-east-1 \
+            --output table
+          echo ""
+          echo "Add these CNAMEs at your DNS provider and wait for validation, then re-run."
+          echo ""
+          exit 1
+        fi
+      fi
+    fi
+
+    if [ -z "$CERT_ARN" ]; then
+      read -p "Certificate ARN (leave empty to request new): " CERT_ARN
+    fi
     if [ -z "$CERT_ARN" ]; then
       echo ""
       read -p "No cert found. Request one now? [Y/n]: " REQUEST_CERT

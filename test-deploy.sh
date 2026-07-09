@@ -29,6 +29,12 @@ case "$2" in
   deploy|sync|cloudfront)
     echo "mock ok"
     ;;
+  list-certificates)
+    echo "$MOCK_CERT_LIST"
+    ;;
+  describe-certificate|request-certificate)
+    echo ""
+    ;;
   *) exit 0 ;;
 esac
 MOCK
@@ -71,6 +77,7 @@ set_mock_defaults() {
   export MOCK_SITEKEY=abc
   export MOCK_DOMAIN=""
   export MOCK_CERT=""
+  export MOCK_CERT_LIST=""
 }
 
 # --- Tests ---
@@ -130,11 +137,12 @@ echo "--- Cert helper (auto-request) ---"
 setup_mock_env
 set_mock_defaults
 export MOCK_DOMAIN=""
+export MOCK_CERT_LIST=""
 # 6 lines: sender, recipient, secret, domain, cert(empty), y
-if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\ny\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
   red "should exit 1 (no cert yet)" "exited 0"
 else
-  if echo "$output" | grep -q "Requesting certificate for" && echo "$output" | grep -q "Certificate ARN:"; then
+  if echo "$output" | grep -q "Searching for existing certificate"; then
     green "auto-requests cert and shows DNS records"
   else
     red "missing cert request output" "$output"
@@ -143,13 +151,14 @@ fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
 trap - EXIT
 
-# Test 4b: Cert helper — decline with "n"
+# Test 4b: Cert helper — manual
 echo ""
 echo "--- Cert helper (manual) ---"
 setup_mock_env
 set_mock_defaults
 export MOCK_DOMAIN=""
-# 6 lines: sender, recipient, secret, domain, cert(empty), n
+export MOCK_CERT_LIST=""
+# cert empty then n at request prompt
 if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\nn\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
   red "should exit 1" "exited 0"
 else
@@ -157,6 +166,44 @@ else
     green "shows manual cert request instructions"
   else
     red "missing manual instructions" "$output"
+  fi
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 4c: Auto-detect existing issued cert
+echo ""
+echo "--- Auto-detect issued cert ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_DOMAIN=""
+export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
+# 4 lines: sender, recipient, secret, domain (cert auto-detected, skips cert prompt)
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "Using existing certificate"; then
+    green "auto-detects and reuses issued cert"
+  else
+    red "did not reuse cert" "$output"
+  fi
+else
+  red "deploy failed" "$output"
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 4d: Pending validation cert
+echo ""
+echo "--- Pending validation cert ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tPENDING_VALIDATION'
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  red "should exit 1" "exited 0"
+else
+  if echo "$output" | grep -q "pending validation"; then
+    green "shows DNS records and exits for pending cert"
+  else
+    red "did not handle pending cert" "$output"
   fi
 fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
