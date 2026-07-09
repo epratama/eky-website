@@ -135,7 +135,7 @@ Resources:
           - ErrorCode: 404
             ResponseCode: 200
             ResponsePagePath: /index.html
-        Aliases: !If [HasCustomDomain, [!Ref DomainName], !Ref "AWS::NoValue"]
+        Aliases: !If [HasCustomDomain, [!Ref DomainName, !Sub "www.${DomainName}"], !Ref "AWS::NoValue"]
         ViewerCertificate: !If
           - HasCustomDomain
           - AcmCertificateArn: !Ref CertificateArn
