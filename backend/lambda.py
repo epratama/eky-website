@@ -77,24 +77,27 @@ def handler(event, context):
                 return _error("Captcha verification failed", HTTPStatus.BAD_REQUEST)
 
     mobile_line = f"Mobile: {mobile}" if mobile else "Mobile: not provided"
+    subject_domain = DOMAIN_NAME or "contact form"
+    from_addr = f"Eky Pratama Portfolio <{SENDER_EMAIL}>"
 
     html_body = f"""<html>
-<body style="font-family: sans-serif; max-width: 600px;">
-  <h2 style="border-bottom: 3px solid #18181B; padding-bottom: 8px;">New Contact Message</h2>
+<body style="font-family: sans-serif; max-width: 600px; color: #18181B;">
+  <h2 style="border-bottom: 3px solid #18181B; padding-bottom: 8px;">New Message from {_esc(name)}</h2>
   <p><strong>Name:</strong> {_esc(name)}</p>
   <p><strong>Email:</strong> {_esc(email)}</p>
   <p>{_esc(mobile_line)}</p>
   <hr style="border: 1px solid #E4E4E7;">
   <p style="white-space: pre-wrap;">{_esc(message)}</p>
+  <hr style="border: 1px solid #E4E4E7;">
+  <p style="font-size: 12px; color: #71717A;">Sent via contact form at {_esc(subject_domain)}</p>
 </body>
 </html>"""
 
-    text_body = f"Name: {name}\nEmail: {email}\n{mobile_line}\n\n{message}"
-    subject_domain = DOMAIN_NAME or "contact form"
+    text_body = f"Name: {name}\nEmail: {email}\n{mobile_line}\n\n{message}\n\n--\nSent via contact form at {subject_domain}"
 
     try:
         ses.send_email(
-            Source=SENDER_EMAIL,
+            Source=from_addr,
             Destination={"ToAddresses": [RECIPIENT_EMAIL]},
             Message={
                 "Subject": {"Data": f"Contact from {name} via {subject_domain}"},
