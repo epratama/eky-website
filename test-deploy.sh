@@ -38,6 +38,13 @@ case "$2" in
   list-hosted-zones)
     echo "$MOCK_ZONES"
     ;;
+  list-resource-record-sets)
+    if echo "$*" | grep -q "www"; then
+      echo "$MOCK_WWW_DNS"
+    else
+      echo "$MOCK_ROOT_DNS"
+    fi
+    ;;
   change-resource-record-sets)
     echo "mock route53 ok"
     ;;
@@ -85,6 +92,8 @@ set_mock_defaults() {
   export MOCK_CERT=""
   export MOCK_CERT_LIST=""
   export MOCK_ZONES=""
+  export MOCK_ROOT_DNS=""
+  export MOCK_WWW_DNS=""
 }
 
 # --- Tests ---
@@ -216,24 +225,21 @@ fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
 trap - EXIT
 
-# Test 5a: Route53 auto-config
+# Test 5a: Route53 auto-config (records already exist)
 echo ""
-echo "--- Route53 auto-config ---"
+echo "--- Route53 records already correct ---"
 setup_mock_env
 set_mock_defaults
 export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
 export MOCK_ZONES=$'/hostedzone/Z123\texample.com.'
-# need DOMAIN set for jq to return it — jq mock returns MOCK_DOMAIN which is ""
-# Actually, the DomainName parameter is read from CF params after deploy
-# For this test, the domain is example.com (entered by user), MOCK_DOMAIN is set by jq mock
-# But jq returns "" for DomainName since MOCK_DOMAIN=""
-# Let me set MOCK_DOMAIN to something for this test
 export MOCK_DOMAIN="example.com"
-if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
-  if echo "$output" | grep -q "Route53 zone found"; then
-    green "auto-configures Route53 ALIAS records"
+export MOCK_ROOT_DNS="test.cloudfront.net."
+export MOCK_WWW_DNS="test.cloudfront.net."
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "already correct"; then
+    green "detects existing records, skips upsert"
   else
-    red "did not configure Route53" "$output"
+    red "did not skip" "$output"
   fi
 else
   red "deploy failed" "$output"
@@ -241,7 +247,29 @@ fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
 trap - EXIT
 
-# Test 5b: Non-Route53 domain
+# Test 5b: Route53 auto-config (records need update)
+echo ""
+echo "--- Route53 records updated ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
+export MOCK_ZONES=$'/hostedzone/Z123\texample.com.'
+export MOCK_DOMAIN="example.com"
+export MOCK_ROOT_DNS="old.cloudfront.net."
+export MOCK_WWW_DNS=""
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "Route53 records updated"; then
+    green "upserts records when outdated/missing"
+  else
+    red "did not update" "$output"
+  fi
+else
+  red "deploy failed" "$output"
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 5c: Non-Route53 domain
 echo ""
 echo "--- Non-Route53 domain ---"
 setup_mock_env
@@ -249,7 +277,7 @@ set_mock_defaults
 export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
 export MOCK_ZONES=""
 export MOCK_DOMAIN="example.com"
-if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
   if echo "$output" | grep -q "not found in Route53"; then
     green "shows manual DNS instructions for non-Route53 domain"
   else

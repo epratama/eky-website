@@ -89,6 +89,38 @@ if [ "$STACK_EXISTS" = true ] && [ -n "$EXISTING_DOMAIN" ]; then
   if [ -z "$CERT_ARN" ]; then
     read -p "Certificate ARN [$EXISTING_CERT]: " CERT_ARN
     CERT_ARN="${CERT_ARN:-$EXISTING_CERT}"
+    if [ -z "$CERT_ARN" ]; then
+      echo ""
+      read -p "No cert provided. Request one now? [Y/n]: " REQUEST_CERT
+      REQUEST_CERT=$(echo "${REQUEST_CERT:-y}" | tr '[:upper:]' '[:lower:]')
+      if [ "$REQUEST_CERT" = "y" ]; then
+        echo "Requesting certificate for $DOMAIN_NAME and www.$DOMAIN_NAME..."
+        ACM_ARN=$(aws acm request-certificate \
+          --domain-name "$DOMAIN_NAME" \
+          --subject-alternative-names "www.$DOMAIN_NAME" \
+          --validation-method DNS \
+          --region us-east-1 \
+          --query 'CertificateArn' --output text)
+        echo "Certificate ARN: $ACM_ARN"
+        echo ""
+        echo "DNS validation records (add these at your DNS provider):"
+        aws acm describe-certificate \
+          --certificate-arn "$ACM_ARN" \
+          --query 'Certificate.DomainValidationOptions[*].{Domain:DomainName,Name:ResourceRecord.Name,Type:ResourceRecord.Type,Value:ResourceRecord.Value}' \
+          --region us-east-1 \
+          --output table
+        echo ""
+        echo "After adding these CNAMEs and waiting 5-10 min for validation, re-run:"
+        echo "  ./deploy.sh $STACK_NAME"
+        echo "  Domain name: $DOMAIN_NAME"
+        echo "  Certificate ARN: $ACM_ARN"
+      else
+        echo ""
+        echo "Request one manually with:"
+        echo "  aws acm request-certificate --domain-name $DOMAIN_NAME --subject-alternative-names www.$DOMAIN_NAME --validation-method DNS --region us-east-1"
+      fi
+      exit 1
+    fi
   fi
 else
   echo "Custom domain (optional — leave empty to skip):"
@@ -178,7 +210,7 @@ PARAMS+=(ParameterKey=RecipientEmail,ParameterValue="$RECIPIENT_EMAIL")
 if [ -n "$HCAPTCHA_SECRET" ]; then
   PARAMS+=(ParameterKey=HCaptchaSecret,ParameterValue="$HCAPTCHA_SECRET")
 fi
-if [ -n "$DOMAIN_NAME" ]; then
+if [ -n "$DOMAIN_NAME" ] && [ -n "$CERT_ARN" ]; then
   PARAMS+=(ParameterKey=DomainName,ParameterValue="$DOMAIN_NAME")
   PARAMS+=(ParameterKey=CertificateArn,ParameterValue="$CERT_ARN")
 fi
@@ -229,38 +261,51 @@ if [ -n "$DOMAIN" ]; then
     --output text 2>/dev/null | sed 's|/hostedzone/||')
   if [ -n "$ZONE_ID" ] && [ "$ZONE_ID" != "None" ]; then
     echo "Route53 zone found: $ZONE_ID"
-    echo "Upserting ALIAS A records pointing to $DIST_DOMAIN..."
-    aws route53 change-resource-record-sets \
+
+    EXISTING_ROOT=$(aws route53 list-resource-record-sets \
       --hosted-zone-id "$ZONE_ID" \
-      --change-batch "{
-        \"Changes\": [
-          {
-            \"Action\": \"UPSERT\",
-            \"ResourceRecordSet\": {
-              \"Name\": \"$DOMAIN\",
-              \"Type\": \"A\",
-              \"AliasTarget\": {
-                \"HostedZoneId\": \"Z2FDTNDATAQYW2\",
-                \"DNSName\": \"$DIST_DOMAIN\",
-                \"EvaluateTargetHealth\": false
-              }
-            }
-          },
-          {
-            \"Action\": \"UPSERT\",
-            \"ResourceRecordSet\": {
-              \"Name\": \"www.$DOMAIN\",
-              \"Type\": \"A\",
-              \"AliasTarget\": {
-                \"HostedZoneId\": \"Z2FDTNDATAQYW2\",
-                \"DNSName\": \"$DIST_DOMAIN\",
-                \"EvaluateTargetHealth\": false
-              }
-            }
-          }
-        ]
-      }" --output text --no-cli-pager
-    echo "Route53 records updated."
+      --query "ResourceRecordSets[?Name=='$DOMAIN.' && Type=='A'].AliasTarget.DNSName" \
+      --output text 2>/dev/null)
+    EXISTING_WWW=$(aws route53 list-resource-record-sets \
+      --hosted-zone-id "$ZONE_ID" \
+      --query "ResourceRecordSets[?Name=='www.$DOMAIN.' && Type=='A'].AliasTarget.DNSName" \
+      --output text 2>/dev/null)
+
+    NEED_ROOT=false
+    NEED_WWW=false
+    if [ "$EXISTING_ROOT" != "$DIST_DOMAIN." ]; then
+      NEED_ROOT=true
+      echo "  root: $DOMAIN → $DIST_DOMAIN"
+    else
+      echo "  root: already points to $DIST_DOMAIN"
+    fi
+    if [ "$EXISTING_WWW" != "$DIST_DOMAIN." ]; then
+      NEED_WWW=true
+      echo "  www:  www.$DOMAIN → $DIST_DOMAIN"
+    else
+      echo "  www:  already points to $DIST_DOMAIN"
+    fi
+
+    if $NEED_ROOT || $NEED_WWW; then
+      CHANGES="["
+      if $NEED_ROOT; then
+        CHANGES+="{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"$DOMAIN\",\"Type\":\"A\",\"AliasTarget\":{\"HostedZoneId\":\"Z2FDTNDATAQYW2\",\"DNSName\":\"$DIST_DOMAIN\",\"EvaluateTargetHealth\":false}}}"
+      fi
+      if $NEED_ROOT && $NEED_WWW; then
+        CHANGES+=","
+      fi
+      if $NEED_WWW; then
+        CHANGES+="{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"www.$DOMAIN\",\"Type\":\"A\",\"AliasTarget\":{\"HostedZoneId\":\"Z2FDTNDATAQYW2\",\"DNSName\":\"$DIST_DOMAIN\",\"EvaluateTargetHealth\":false}}}"
+      fi
+      CHANGES+="]"
+      aws route53 change-resource-record-sets \
+        --hosted-zone-id "$ZONE_ID" \
+        --change-batch "{\"Changes\": $CHANGES}" \
+        --output text --no-cli-pager
+      echo "Route53 records updated."
+    else
+      echo "All records already correct — nothing to do."
+    fi
   else
     echo "Domain not found in Route53. Add manually:"
     echo "  $DOMAIN           CNAME  $DIST_DOMAIN"
