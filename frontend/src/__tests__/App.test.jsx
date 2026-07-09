@@ -10,7 +10,7 @@ describe('App', () => {
 
   it('renders all section IDs for navbar scrolling', () => {
     render(<App />)
-    expect(document.getElementById('hero')).toBeInTheDocument()
+    expect(document.getElementById('home')).toBeInTheDocument()
     expect(document.getElementById('summary')).toBeInTheDocument()
     expect(document.getElementById('achievements')).toBeInTheDocument()
     expect(document.getElementById('experience')).toBeInTheDocument()

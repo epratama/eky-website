@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 
 const SECTIONS = [
-  { id: 'hero', label: 'Home' },
+  { id: 'home', label: 'Home' },
   { id: 'summary', label: 'About' },
   { id: 'achievements', label: 'Achievements' },
   { id: 'experience', label: 'Experience' },
@@ -36,7 +36,7 @@ export default function Navbar() {
       <div className="mx-auto max-w-3xl border-[3px] border-brutal-primary bg-brutal-bg shadow-brutal">
         <div className="flex items-center justify-between px-4 py-2">
           <a
-            href="#hero"
+            href="#home"
             className="font-heading text-lg font-extrabold text-brutal-primary hover:text-brutal-accent cursor-pointer"
           >
             EP

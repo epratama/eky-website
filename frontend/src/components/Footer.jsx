@@ -24,7 +24,7 @@ export default function Footer({ name, role, linkedin }) {
 
         <div className="flex items-center gap-4">
           <a
-            href="#hero"
+            href="#home"
             className="flex items-center gap-2 border-[2px] border-brutal-bg px-4 py-2 font-body text-sm font-bold text-brutal-bg hover:bg-brutal-bg hover:text-brutal-primary cursor-pointer transition-colors duration-150"
             aria-label="Back to top"
           >

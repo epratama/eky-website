@@ -64,7 +64,8 @@ def handler(event, context):
             Source=SENDER_EMAIL,
             Destination={"ToAddresses": [RECIPIENT_EMAIL]},
             Message={
-                "Subject": {"Data": f"Contact from {name} via resume website"},
+                "Subject": {"Data": f"Contact from {name} via contact form"},
+
                 "Body": {
                     "Html": {"Data": html_body},
                     "Text": {"Data": text_body},

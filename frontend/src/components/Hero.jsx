@@ -7,8 +7,8 @@ export default function Hero({ data }) {
 
   return (
     <section
-      id="hero"
-      className="min-h-screen pt-24 pb-16 px-6 flex items-center"
+      id="home"
+      className="min-h-[90vh] md:min-h-screen pt-20 pb-12 md:pt-24 md:pb-16 px-6 flex items-center"
     >
       <div
         ref={ref}
