@@ -1,7 +1,7 @@
 # Portfolio Website
 
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
-command builds, tests, provisions infrastructure, uploads, and configures DNS.
+command builds, provisions infrastructure, uploads, and configures DNS.
 55 tests across 4 suites. 14 AWS resources managed via CloudFormation.
  Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills & Tools Used](#skills--tools-used)).
 
@@ -118,7 +118,7 @@ Identified technical friction points during development and built automated guar
 | **IaC** | CloudFormation (14 resources, 6 parameters) |
 | **Testing** | Vitest + testing-library (12), pytest (13), bash mocks (30) |
 | **Design** | Neo-brutalism (ui-ux-pro-max design system) |
-| **CI/CD** | `deploy.sh` — 1 command: build → test → deploy → invalidate |
+| **CI/CD** | `deploy.sh` — 1 command: build → deploy → invalidate |
 
 ---
 
@@ -161,7 +161,7 @@ Identified technical friction points during development and built automated guar
 | **Lambda validation** | Name/email/message required, email format, JSON decode error |
 | **Lambda security** | Origin rejection, rate limit (3/min then 429), CORS restriction, HTML escaping |
 | **Deploy flow** | Stack check, SES verify/decline/auto-verify, cert detect (issued/pending/none), cert request, Route53 DNS (skip/update/non-Route53) |
-| **CF template** | Syntax validation, 14 resources present, 6 parameters, secrets marked `NoEcho` |
+| **CF template** | Syntax validation, key resources present, 6 parameters, secrets marked `NoEcho` |
 
 ---
 
