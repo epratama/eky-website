@@ -2,10 +2,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: Resume website — S3 + CloudFront hosting with Lambda contact form
 
 Parameters:
-  DomainName:
-    Type: String
-    Default: ""
-    Description: Custom domain name (optional, leave empty to use CloudFront URL)
   HCaptchaSecret:
     Type: String
     NoEcho: true

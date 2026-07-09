@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.superpowers
+.DS_Store
+docs/.DS_Store
+*.pyc
+__pycache__
+.playwright-mcp
+Eky_Pratama_Resume.pdf
+.opencode

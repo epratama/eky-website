@@ -45,7 +45,7 @@ export default function Hero({ data }) {
         </div>
 
         <div className="hidden md:block">
-          <DecorativeShapes variant="hero" />
+          <DecorativeShapes />
         </div>
       </div>
     </section>
