@@ -100,7 +100,7 @@ def handler(event, context):
             Source=from_addr,
             Destination={"ToAddresses": [RECIPIENT_EMAIL]},
             Message={
-                "Subject": {"Data": f"Contact from {name} via {subject_domain}"},
+                "Subject": {"Data": f"Portfolio contact from {name} via {subject_domain}"},
                 "Body": {
                     "Html": {"Data": html_body},
                     "Text": {"Data": text_body},

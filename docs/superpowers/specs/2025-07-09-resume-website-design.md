@@ -26,7 +26,7 @@ User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → 
 - **Infrastructure**: CloudFormation — S3 bucket, CloudFront distribution with OAC, API Gateway HTTP API, Lambda function, IAM roles, SES configuration
 - **DNS**: Route53 hosted zone with ALIAS A records for root + www, SES domain verification, SPF, DKIM (3 keys), DMARC (p=none), MAIL FROM domain
 - **Resume data**: Static JSON file in frontend (single source of truth, easy to update)
-- **Testing**: 42 tests total across 4 suites (12 frontend + 13 Lambda + 13 deploy + 17 CF template)
+- **Testing**: 55 tests total across 4 suites (12 frontend + 13 Lambda + 13 deploy + 17 CF template)
 
 ## Visual Design System
 
@@ -42,7 +42,7 @@ User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → 
 | Border | `3px solid #18181B` |
 | Shadow | `4px 4px 0 #18181B` |
 | Shadow hover | `8px 8px 0 #18181B` |
-| Border radius | `0px` (default), `4px` on select elements |
+| Border radius | `0px` (default) |
 | Gradients | None |
 | Blur/opacity overlays | None |
 | Favicon | Inline SVG "EP" monogram — slate background, accent blue text |
@@ -81,7 +81,7 @@ User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → 
 - Asymmetric layout: text block offset left with accent geometric SVG on right
 - Name in Archivo 800, large (clamp 3rem→6rem)
 - Title: "Technical Lead & Senior Software Engineer"
-- Location: North Sydney, NSW
+- Location: North Sydney, NSW, Australia
 - LinkedIn + GitHub buttons side-by-side in flex row, identical brutalist style
 - Mobile: `min-h-[90vh] pt-20 pb-12`, desktop: `min-h-screen pt-24 pb-16`
 - Favicon: inline SVG "EP" monogram
@@ -146,7 +146,7 @@ User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → 
 | 375px (mobile) | Single column, stacked, reduced Hero padding (`pt-20 pb-12`), `min-h-[90vh]` |
 | 768px (tablet) | 2-column grids where applicable |
 | 1024px (desktop) | Full layout with offsets, 3-column achievement grid |
-| 1440px+ | Max-width container 1280px, centered |
+| 1440px+ | Max-width container 1152px (max-w-6xl), centered |
 
 ## Backend (Lambda Python 3.12)
 
@@ -238,7 +238,7 @@ Single command deploys everything: `./deploy.sh eky-website`
 Mock-based smoke tests covering: stack not found, full deploy, missing deps, cert auto-detect (issued/pending/not found), cert request, domain-without-cert blocking, Route53 (skip upsert / update / non-Route53), SES verification (verified / decline / verify).
 
 ### test-template.sh (17 tests)
-Validates CloudFormation template: syntax check, all 14 resources present, all 6 parameters present, HCaptchaSecret marked NoEcho.
+Validates CloudFormation template: syntax check, key resources present, all 6 parameters present, HCaptchaSecret marked NoEcho.
 
 ### backend/test_lambda.py (13 pytest tests)
 Origin validation, rate limiting, CORS, input validation, JSON parsing, HTML escaping.

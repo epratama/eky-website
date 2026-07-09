@@ -1944,7 +1944,7 @@ chmod +x deploy.sh
 - [ ] **Step 2: Commit**
 
 ```bash
-git add build.sh
+git add deploy.sh
 git commit -m "feat: build and deploy script"
 ```
 

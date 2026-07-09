@@ -300,7 +300,7 @@ Resources:
               return {"Access-Control-Allow-Origin": ALLOWED_ORIGIN or "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS"}
 
           def _esc(s):
-              return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+              return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#x27;")
 
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
