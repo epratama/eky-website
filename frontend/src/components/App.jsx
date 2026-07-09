@@ -20,7 +20,7 @@ export default function App() {
       <Skills skills={resume.skills} />
       <Education education={resume.education} certifications={resume.certifications} />
       <ContactForm />
-      <Footer name={resume.name} linkedin={resume.linkedin} />
+      <Footer name={resume.name} role={resume.title} linkedin={resume.linkedin} />
     </div>
   )
 }

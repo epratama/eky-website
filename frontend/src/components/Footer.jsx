@@ -1,13 +1,13 @@
 import { Linkedin, ArrowUp } from 'lucide-react'
 
-export default function Footer({ name, linkedin }) {
+export default function Footer({ name, role, linkedin }) {
   return (
     <footer className="border-t-[3px] border-brutal-primary bg-brutal-primary text-brutal-bg py-10 px-6">
       <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="text-center sm:text-left">
           <p className="font-heading text-lg font-extrabold">{name}</p>
           <p className="font-body text-sm text-[#A1A1AA] mt-1">
-            Senior Software Engineer
+            {role}
           </p>
           <div className="flex items-center justify-center sm:justify-start gap-4 mt-3">
             <a
