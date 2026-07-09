@@ -66,23 +66,40 @@ else
     read -p "Certificate ARN (us-east-1): " CERT_ARN
     if [ -z "$CERT_ARN" ]; then
       echo ""
-      echo "No certificate ARN provided. Request one first:"
-      echo ""
-      echo "  ACM_ARN=\$(aws acm request-certificate \\"
-      echo "    --domain-name $DOMAIN_NAME \\"
-      echo "    --subject-alternative-names www.$DOMAIN_NAME \\"
-      echo "    --validation-method DNS \\"
-      echo "    --region us-east-1 \\"
-      echo "    --query 'CertificateArn' --output text)"
-      echo ""
-      echo "  # Get DNS validation record:"
-      echo "  aws acm describe-certificate \\"
-      echo "    --certificate-arn \"\$ACM_ARN\" \\"
-      echo "    --query 'Certificate.DomainValidationOptions[0].ResourceRecord' \\"
-      echo "    --region us-east-1"
-      echo ""
-      echo "Add the CNAME at your DNS provider, wait for validation, then re-run with the ARN."
-      echo ""
+      read -p "No cert found. Request one now? [Y/n]: " REQUEST_CERT
+      REQUEST_CERT=$(echo "${REQUEST_CERT:-y}" | tr '[:upper:]' '[:lower:]')
+      if [ "$REQUEST_CERT" = "y" ]; then
+        echo "Requesting certificate for $DOMAIN_NAME and www.$DOMAIN_NAME..."
+        ACM_ARN=$(aws acm request-certificate \
+          --domain-name "$DOMAIN_NAME" \
+          --subject-alternative-names "www.$DOMAIN_NAME" \
+          --validation-method DNS \
+          --region us-east-1 \
+          --query 'CertificateArn' --output text)
+        echo "Certificate ARN: $ACM_ARN"
+        echo ""
+        echo "DNS validation records (add these at your DNS provider):"
+        aws acm describe-certificate \
+          --certificate-arn "$ACM_ARN" \
+          --query 'Certificate.DomainValidationOptions[*].{Domain:DomainName,Name:ResourceRecord.Name,Type:ResourceRecord.Type,Value:ResourceRecord.Value}' \
+          --region us-east-1 \
+          --output table
+        echo ""
+        echo "After adding these CNAMEs and waiting 5-10 min for validation, re-run:"
+        echo "  ./deploy.sh $STACK_NAME"
+        echo "  Domain name: $DOMAIN_NAME"
+        echo "  Certificate ARN: $ACM_ARN"
+        echo ""
+      else
+        echo ""
+        echo "Request one manually:"
+        echo "  aws acm request-certificate \\"
+        echo "    --domain-name $DOMAIN_NAME \\"
+        echo "    --subject-alternative-names www.$DOMAIN_NAME \\"
+        echo "    --validation-method DNS \\"
+        echo "    --region us-east-1"
+        echo ""
+      fi
       exit 1
     fi
   fi

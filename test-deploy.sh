@@ -124,20 +124,39 @@ else
 fi
 rm -rf "$MOCK_DIR"
 
-# Test 4: Cert helper on new domain
+# Test 4a: Cert helper — auto-request with "y"
 echo ""
-echo "--- Cert helper ---"
+echo "--- Cert helper (auto-request) ---"
 setup_mock_env
 set_mock_defaults
 export MOCK_DOMAIN=""
-# s@t.com, r@t.com, empty secret, domain, empty cert → helper + exit 1
-if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
-  red "should exit 1 (missing cert)" "exited 0"
+# 6 lines: sender, recipient, secret, domain, cert(empty), y
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\ny\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  red "should exit 1 (no cert yet)" "exited 0"
 else
-  if echo "$output" | grep -q "No certificate ARN"; then
-    green "shows cert request command"
+  if echo "$output" | grep -q "Requesting certificate for" && echo "$output" | grep -q "Certificate ARN:"; then
+    green "auto-requests cert and shows DNS records"
   else
-    red "no cert helper" "$output"
+    red "missing cert request output" "$output"
+  fi
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 4b: Cert helper — decline with "n"
+echo ""
+echo "--- Cert helper (manual) ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_DOMAIN=""
+# 6 lines: sender, recipient, secret, domain, cert(empty), n
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\nn\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  red "should exit 1" "exited 0"
+else
+  if echo "$output" | grep -q "Request one manually:"; then
+    green "shows manual cert request instructions"
+  else
+    red "missing manual instructions" "$output"
   fi
 fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
