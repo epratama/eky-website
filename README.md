@@ -117,6 +117,9 @@ Identified technical friction points and built automated guardrails into `deploy
 | **Skill invocation** | `ui-ux-pro-max` | Neo-brutalist design system (styles, palettes, fonts, spacing) |
 | **Skill invocation** | `ponytail` | Over-engineering audits: cut dead code, removed unused dependencies |
 | **Skill invocation** | `test-driven-development` | RED-GREEN-REFACTOR cycle: tests written before implementation |
+| **Bug diagnosis** | `systematic-debugging` | Debugged Lambda::Url org policy block, DMARC alignment, JMESPath `@` syntax, CF policy ID region mismatch |
+| **Quality gate** | `verification-before-completion` | Ran all 55 tests + lint before every completion claim |
+| **Peer review** | `requesting-code-review` | Cross-checked work at task completion boundaries |
 | **Process artifacts** | `docs/superpowers/specs/` + `docs/superpowers/plans/` | Full lifecycle from design spec to implementation plan — see [Development Artifacts](#development-artifacts) |
 
 ---
