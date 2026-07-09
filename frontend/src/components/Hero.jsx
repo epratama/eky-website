@@ -1,6 +1,6 @@
 import { useScrollReveal } from '../hooks/useScrollReveal'
 import DecorativeShapes from './DecorativeShapes'
-import { Linkedin } from 'lucide-react'
+import { Linkedin, Github } from 'lucide-react'
 
 export default function Hero({ data }) {
   const { ref, isVisible } = useScrollReveal()
@@ -33,15 +33,26 @@ export default function Hero({ data }) {
             {data.location}
           </p>
 
-          <a
-            href={data.linkedin}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 border-[3px] border-brutal-primary px-5 py-2.5 font-body font-bold text-sm text-brutal-primary hover:bg-brutal-primary hover:text-brutal-bg cursor-pointer transition-colors duration-150"
-          >
-            <Linkedin size={18} />
-            LinkedIn
-          </a>
+          <div className="flex flex-wrap gap-3">
+            <a
+              href={data.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 border-[3px] border-brutal-primary px-5 py-2.5 font-body font-bold text-sm text-brutal-primary hover:bg-brutal-primary hover:text-brutal-bg cursor-pointer transition-colors duration-150"
+            >
+              <Linkedin size={18} />
+              LinkedIn
+            </a>
+            <a
+              href={data.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 border-[3px] border-brutal-primary px-5 py-2.5 font-body font-bold text-sm text-brutal-primary hover:bg-brutal-primary hover:text-brutal-bg cursor-pointer transition-colors duration-150"
+            >
+              <Github size={18} />
+              GitHub
+            </a>
+          </div>
         </div>
 
         <div className="hidden md:block">

@@ -33,4 +33,10 @@ describe('App', () => {
     const internetrixPos = html.indexOf('Internetrix')
     expect(swiftPos).toBeLessThan(internetrixPos)
   })
+
+  it('renders GitHub link', () => {
+    render(<App />)
+    const gh = screen.getByRole('link', { name: /github/i })
+    expect(gh).toHaveAttribute('href', 'https://github.com/epratama')
+  })
 })
