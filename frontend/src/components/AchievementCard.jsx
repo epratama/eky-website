@@ -8,7 +8,7 @@ export default function AchievementCard({ achievement, index }) {
   return (
     <div
       ref={ref}
-      className={`border-[3px] border-brutal-primary bg-white shadow-brutal p-6 hover:shadow-brutal-lg cursor-pointer transition-all duration-200 ${
+      className={`border-[3px] border-brutal-primary bg-white shadow-brutal p-6 hover:shadow-brutal-lg transition-all duration-200 ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
       }`}
       style={{ transitionDelay: delay }}
