@@ -53,6 +53,48 @@ fi
 read -s -p "hCaptcha secret (leave empty to keep existing): " HCAPTCHA_SECRET
 echo ""
 
+# ====== SES email verification ======
+verify_ses_email() {
+  local email="$1"
+  local status
+  status=$(aws ses get-identity-verification-attributes --identities "$email" \
+    --query "VerificationAttributes['$email'].VerificationStatus" --output text 2>/dev/null)
+  if [ "$status" = "Success" ]; then
+    echo "  $email: verified"
+    return 0
+  fi
+  echo "  $email: not verified"
+  read -p "  Send verification email to $email? [Y/n]: " VERIFY
+  VERIFY=$(echo "${VERIFY:-y}" | tr '[:upper:]' '[:lower:]')
+  if [ "$VERIFY" != "y" ]; then
+    echo "  WARNING: SES requires verified emails in sandbox mode."
+    return 1
+  fi
+  aws ses verify-email-identity --email-address "$email" > /dev/null 2>&1
+  echo "  Verification email sent to $email — check your inbox and click the link."
+  echo "  Waiting for verification..."
+  for i in $(seq 1 30); do
+    sleep 5
+    status=$(aws ses get-identity-verification-attributes --identities "$email" \
+      --query "VerificationAttributes['$email'].VerificationStatus" --output text 2>/dev/null)
+    if [ "$status" = "Success" ]; then
+      echo "  $email: verified"
+      return 0
+    fi
+    printf "."
+  done
+  echo ""
+  echo "  Verification timed out. Please verify manually and re-run."
+  return 1
+}
+
+echo ""
+echo "=== Checking SES verification ==="
+verify_ses_email "$SENDER_EMAIL" || { echo "Sender email not verified. Aborting."; exit 1; }
+if [ "$RECIPIENT_EMAIL" != "$SENDER_EMAIL" ]; then
+  verify_ses_email "$RECIPIENT_EMAIL" || { echo "Recipient email not verified. Aborting."; exit 1; }
+fi
+
 # ====== Custom domain + cert ======
 find_cert_for_domain() {
   local domain="$1"

@@ -44,6 +44,17 @@ case "$2" in
   change-resource-record-sets)
     echo "mock route53 ok"
     ;;
+  get-identity-verification-attributes)
+    if [ -f /tmp/mock-ses-polled ]; then
+      echo "Success"
+    else
+      touch /tmp/mock-ses-polled
+      echo "$MOCK_SES_STATUS"
+    fi
+    ;; 
+  verify-email-identity)
+    echo ""
+    ;;
   *) exit 0 ;;
 esac
 MOCK
@@ -76,6 +87,7 @@ MOCK
 }
 
 set_mock_defaults() {
+  rm -f /tmp/mock-ses-polled
   export MOCK_CF_FAIL=false
   export MOCK_S3=bucket
   export MOCK_API=https://api.test
@@ -90,6 +102,7 @@ set_mock_defaults() {
   export MOCK_ZONES=""
   export MOCK_ROOT_DNS=""
   export MOCK_WWW_DNS=""
+  export MOCK_SES_STATUS="Success"
 }
 
 # --- Tests ---
@@ -280,6 +293,67 @@ else
   red "deploy failed" "$output"
 fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 11: SES already verified
+echo ""
+echo "--- SES already verified ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_SES_STATUS="Success"
+export MOCK_DOMAIN=""
+if output=$(printf 's@t.com\nr@t.com\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "s@t.com: verified"; then
+    green "skips SES when email already verified"
+  else
+    red "SES check not shown" "$output"
+  fi
+else
+  red "deploy failed" "$output"
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 12: SES not verified -> user declines
+echo ""
+echo "--- SES not verified -> decline ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_SES_STATUS="Pending"
+export MOCK_DOMAIN=""
+# inputs: sender, recipient, secret (empty), decline verify, domain (empty)
+if output=$(printf 's@t.com\nr@t.com\n\nn\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  red "should exit 1" "exited 0"
+else
+  if echo "$output" | grep -q "not verified"; then
+    green "aborts when SES verification declined"
+  else
+    red "did not abort" "$output"
+  fi
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 13: SES not verified -> user verifies
+echo ""
+echo "--- SES not verified -> verify ---"
+rm -f /tmp/mock-ses-polled
+setup_mock_env
+set_mock_defaults
+export MOCK_SES_STATUS="Pending"
+export MOCK_DOMAIN=""
+# inputs: sender, recipient, secret, y (verify), domain (empty)
+if output=$(printf 's@t.com\nr@t.com\n\ny\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "verified"; then
+    green "verifies SES email and continues"
+  else
+    red "verification failed" "$output"
+  fi
+else
+  red "deploy failed" "$output"
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+rm -f /tmp/mock-ses-polled
 trap - EXIT
 
 echo ""
