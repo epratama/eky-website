@@ -156,8 +156,9 @@ infrastructure/
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Eky Pratama — Senior Software Engineer</title>
-    <meta name="description" content="Senior Software Engineer with 15+ years of experience in web platforms, cloud architecture, and AI-assisted development." />
+    <title>Eky Pratama — Technical Lead & Senior Software Engineer</title>
+    <meta name="description" content="Technical Lead & Senior Software Engineer with 15+ years of experience in web platforms, cloud architecture, and AI-assisted development." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%2318181B'/><text x='16' y='23' text-anchor='middle' font-family='Archivo,sans-serif' font-weight='800' font-size='18' fill='%232563EB'>EP</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -325,10 +326,11 @@ git commit -m "scaffold: Vite + React + Tailwind with neo-brutalist config"
 ```json
 {
   "name": "Eky Pratama",
-  "title": "Senior Software Engineer",
+  "title": "Technical Lead & Senior Software Engineer",
   "location": "North Sydney, NSW, Australia",
   "linkedin": "https://linkedin.com/in/ekyputrapratama",
-  "summary": "Senior Software Engineer with 15+ years of experience designing, architecting, and scaling web platforms across the full lifecycle, from on-premise infrastructure to modern cloud-native systems. Spent over a decade taking ownership of an existing marketing automation platform and driving its sustained modernisation: migrating it from on-premise infrastructure to AWS, evolving its database architecture through multiple generations, and upgrading its core runtime and UI framework. Took full end-to-end ownership of new business-critical modules from concept to production, and adopted AI-assisted development practices to improve engineering throughput.",
+  "github": "https://github.com/epratama",
+  "summary": "Technical Lead & Senior Software Engineer with 15+ years of experience designing, architecting, and scaling web platforms across the full lifecycle, from on-premise infrastructure to modern cloud-native systems. Spent over a decade taking ownership of an existing marketing automation platform and driving its sustained modernisation: migrating it from on-premise infrastructure to AWS, evolving its database architecture through multiple generations, and upgrading its core runtime and UI framework. Took full end-to-end ownership of new business-critical modules from concept to production, and adopted AI-assisted development practices to improve engineering throughput.",
   "keyAchievements": [
     {
       "title": "Multi-Tenant SaaS Core Platform",
@@ -1230,7 +1232,7 @@ export default function Footer({ name, linkedin }) {
         <div className="text-center sm:text-left">
           <p className="font-heading text-lg font-extrabold">{name}</p>
           <p className="font-body text-sm text-[#A1A1AA] mt-1">
-            Senior Software Engineer
+            Technical Lead &amp; Senior Software Engineer
           </p>
           <div className="flex items-center justify-center sm:justify-start gap-4 mt-3">
             <a
