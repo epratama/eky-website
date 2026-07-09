@@ -3,7 +3,7 @@
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
 command builds, tests, provisions infrastructure, uploads, and configures DNS.
 55 tests across 4 suites. 14 AWS resources managed via CloudFormation.
- Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills Used](#superpowers-skills-used)).
+ Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills & Tools Used](#skills--tools-used)).
 
 ---
 
@@ -33,7 +33,7 @@ command builds, tests, provisions infrastructure, uploads, and configures DNS.
                                                             SPF+DKIM
                                                              +DMARC
                                                                 ▼
-                                                            📧 inbox
+                                                          Your inbox
 ```
 
 ### Defense-in-depth
@@ -107,20 +107,21 @@ Identified technical friction points and built automated guardrails into `deploy
 
 ---
 
-## Superpowers Skills Used
+## Skills & Tools Used
 
-| OpenCode Feature | Superpowers Skill | How Used |
-|---|---|---|
-| **Plan mode** | `brainstorming` | Design spec → clarifying Q&A → design approval |
-| **Plan mode** | `writing-plans` | 20-task implementation roadmap with file paths + code |
-| **Subagent dispatch** | `subagent-driven-development` | 20 tasks executed in parallel with per-task code reviews |
-| **Skill invocation** | `ui-ux-pro-max` | Neo-brutalist design system (styles, palettes, fonts, spacing) |
-| **Skill invocation** | `ponytail` | Over-engineering audits: cut dead code, removed unused dependencies |
-| **Skill invocation** | `test-driven-development` | RED-GREEN-REFACTOR cycle: tests written before implementation |
-| **Bug diagnosis** | `systematic-debugging` | Debugged Lambda::Url org policy block, DMARC alignment, JMESPath `@` syntax, CF policy ID region mismatch |
-| **Quality gate** | `verification-before-completion` | Ran all 55 tests + lint before every completion claim |
-| **Peer review** | `requesting-code-review` | Cross-checked work at task completion boundaries |
-| **Process artifacts** | `docs/superpowers/specs/` + `docs/superpowers/plans/` | Full lifecycle from design spec to implementation plan — see [Development Artifacts](#development-artifacts) |
+| OpenCode Feature | Skill / Tool | Origin | How Used |
+|---|---|---|---|
+| **Plan mode** | `brainstorming` | Superpowers | Design spec → clarifying Q&A → design approval |
+| **Plan mode** | `writing-plans` | Superpowers | 20-task implementation roadmap with file paths + code |
+| **Subagent dispatch** | `subagent-driven-development` | Superpowers | 20 tasks executed in parallel with per-task code reviews |
+| **Memory** | `opencode-mem` | OpenCode | Store/query project context, decisions, and preferences across sessions |
+| **Skill invocation** | `ui-ux-pro-max` | Community | Neo-brutalist design system (styles, palettes, fonts, spacing) |
+| **Skill invocation** | `ponytail` | Community | Over-engineering audits: cut dead code, removed unused dependencies |
+| **Skill invocation** | `test-driven-development` | Superpowers | RED-GREEN-REFACTOR cycle: tests written before implementation |
+| **Bug diagnosis** | `systematic-debugging` | Superpowers | Debugged Lambda::Url org policy block, DMARC alignment, JMESPath `@` syntax, CF policy ID region mismatch |
+| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 55 tests + lint before every completion claim |
+| **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
+| **Process artifacts** | `docs/superpowers/specs/` + `docs/superpowers/plans/` | — | Full lifecycle from design spec to implementation plan — see [Development Artifacts](#development-artifacts) |
 
 ---
 
