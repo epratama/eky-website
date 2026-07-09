@@ -5,18 +5,24 @@ set -e
 
 STACK_NAME="${1:?Usage: ./deploy.sh <stack-name>}"
 
+# Check dependencies
+missing=()
+command -v aws > /dev/null 2>&1 || missing+=(aws)
+command -v jq  > /dev/null 2>&1 || missing+=(jq)
+command -v npm > /dev/null 2>&1 || missing+=(npm)
+if [ ${#missing[@]} -gt 0 ]; then
+  echo "Error: missing dependencies: ${missing[*]}"
+  echo "Install: brew install ${missing[*]}"
+  exit 1
+fi
+
 # Verify stack exists
 if ! aws cloudformation describe-stacks --stack-name "$STACK_NAME" > /dev/null 2>&1; then
   echo "Error: stack '$STACK_NAME' not found"
   exit 1
 fi
 
-# Fetch all values in one API call (depends on jq)
-if ! command -v jq > /dev/null 2>&1; then
-  echo "Error: jq is required (brew install jq)"
-  exit 1
-fi
-
+# Fetch all values in one API call
 DATA=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --output json)
 S3_BUCKET=$(echo "$DATA" | jq -r '.Stacks[0].Outputs[] | select(.OutputKey=="S3Bucket") | .OutputValue')
 LAMBDA_URL=$(echo "$DATA" | jq -r '.Stacks[0].Outputs[] | select(.OutputKey=="LambdaURL") | .OutputValue')
