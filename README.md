@@ -30,10 +30,10 @@ Developed entirely with **OpenCode** (AI coding agent) using **Superpowers** ski
                                           │  Rate 3/min  │      │
                                           │  CORS        │      │
                                           └──────────────┘      │
-                                                         SPF+DKIM
-                                                          +DMARC
-                                                             ▼
-                                                         📧 inbox
+                                                            SPF+DKIM
+                                                             +DMARC
+                                                                ▼
+                                                            📧 inbox
 ```
 
 ### Defense-in-depth
