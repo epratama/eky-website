@@ -4,6 +4,7 @@
 set -e
 
 STACK_NAME="${1:?Usage: ./deploy.sh <stack-name>}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Check deps
 missing=()
@@ -62,7 +63,7 @@ fi
 echo ""
 echo "=== Deploying stack: $STACK_NAME ==="
 aws cloudformation deploy \
-  --template-file "$(dirname "$0")/infrastructure/template.yaml" \
+  --template-file "$SCRIPT_DIR/infrastructure/template.yaml" \
   --stack-name "$STACK_NAME" \
   --parameter-overrides "${PARAMS[@]}" \
   --capabilities CAPABILITY_IAM
@@ -83,9 +84,9 @@ echo "CDN:      $DIST_DOMAIN"
 # Build
 echo ""
 echo "=== Building ==="
-cd "$(dirname "$0")/frontend"
+cd "$SCRIPT_DIR/frontend"
 VITE_LAMBDA_URL="$LAMBDA_URL" VITE_HCAPTCHA_SITEKEY="$HCAPTCHA_SITEKEY" npm run build
-cd "$(dirname "$0")"
+cd "$SCRIPT_DIR"
 
 # Upload
 echo "=== Uploading to S3 ==="
