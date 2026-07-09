@@ -10,6 +10,8 @@ export default function ContactForm() {
   const [status, setStatus] = useState('idle')
   const captchaRef = useRef(null)
   const captchaWidgetId = useRef(null)
+  const formRef = useRef(form)
+  formRef.current = form
 
   useEffect(() => {
     const script = document.createElement('script')
@@ -65,15 +67,16 @@ export default function ContactForm() {
   }
 
   const submitForm = async (token) => {
+    const currentForm = formRef.current
     try {
       const res = await fetch(LAMBDA_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          mobile: form.mobile || undefined,
-          message: form.message,
+          name: currentForm.name,
+          email: currentForm.email,
+          mobile: currentForm.mobile || undefined,
+          message: currentForm.message,
           hcaptcha_token: token || 'dev-bypass',
         }),
       })
