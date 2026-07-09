@@ -1,10 +1,11 @@
 import json
 import os
 import re
+import urllib.request
+import urllib.parse
 from http import HTTPStatus
 
 import boto3
-import requests
 
 RECIPIENT_EMAIL = os.environ["RECIPIENT_EMAIL"]
 SENDER_EMAIL = os.environ["SENDER_EMAIL"]
@@ -35,14 +36,13 @@ def handler(event, context):
         return _error("Message is required", HTTPStatus.BAD_REQUEST)
 
     if captcha_token != "dev-bypass":
-        verify_resp = requests.post(
-            HCAPTCHA_VERIFY_URL,
-            data={"secret": HCAPTCHA_SECRET, "response": captcha_token},
-            timeout=10,
-        )
-        verify_data = verify_resp.json()
-        if not verify_data.get("success"):
-            return _error("Captcha verification failed", HTTPStatus.BAD_REQUEST)
+        data = urllib.parse.urlencode(
+            {"secret": HCAPTCHA_SECRET, "response": captcha_token}
+        ).encode()
+        req = urllib.request.Request(HCAPTCHA_VERIFY_URL, data=data, method="POST")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if not json.loads(resp.read()).get("success"):
+                return _error("Captcha verification failed", HTTPStatus.BAD_REQUEST)
 
     mobile_line = f"Mobile: {mobile}" if mobile else "Mobile: not provided"
 
@@ -73,7 +73,10 @@ def handler(event, context):
         )
     except Exception as e:
         print(f"SES send error: {e}")
-        return _error("Failed to send message. Please try again later.", HTTPStatus.INTERNAL_SERVER_ERROR)
+        return _error(
+            "Failed to send message. Please try again later.",
+            HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
 
     return {
         "statusCode": HTTPStatus.OK,
@@ -99,4 +102,9 @@ def _cors_headers():
 
 
 def _esc(s):
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    return (
+        s.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )

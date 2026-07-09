@@ -189,7 +189,8 @@ Resources:
         ZipFile: |
           import json, os, re
           from http import HTTPStatus
-          import boto3, requests
+          import urllib.request
+          import boto3
 
           RECIPIENT_EMAIL = os.environ["RECIPIENT_EMAIL"]
           SENDER_EMAIL = os.environ["SENDER_EMAIL"]
@@ -215,9 +216,11 @@ Resources:
               if not message:
                   return _error("Message is required", HTTPStatus.BAD_REQUEST)
               if captcha_token != "dev-bypass":
-                  verify_resp = requests.post(HCAPTCHA_VERIFY_URL, data={"secret": HCAPTCHA_SECRET, "response": captcha_token}, timeout=10)
-                  if not verify_resp.json().get("success"):
-                      return _error("Captcha verification failed", HTTPStatus.BAD_REQUEST)
+                  data = urllib.parse.urlencode({"secret": HCAPTCHA_SECRET, "response": captcha_token}).encode()
+                  req = urllib.request.Request(HCAPTCHA_VERIFY_URL, data=data, method="POST")
+                  with urllib.request.urlopen(req, timeout=10) as resp:
+                      if not json.loads(resp.read()).get("success"):
+                          return _error("Captcha verification failed", HTTPStatus.BAD_REQUEST)
               mobile_line = f"Mobile: {mobile}" if mobile else "Mobile: not provided"
               html_body = f'<html><body style="font-family:sans-serif;max-width:600px"><h2 style="border-bottom:3px solid #18181B;padding-bottom:8px">New Contact Message</h2><p><strong>Name:</strong> {_esc(name)}</p><p><strong>Email:</strong> {_esc(email)}</p><p>{_esc(mobile_line)}</p><hr style="border:1px solid #E4E4E7"><p style="white-space:pre-wrap">{_esc(message)}</p></body></html>'
               text_body = f"Name: {name}\nEmail: {email}\n{mobile_line}\n\n{message}"
