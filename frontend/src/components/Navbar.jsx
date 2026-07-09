@@ -46,6 +46,7 @@ export default function Navbar() {
             onClick={() => setMenuOpen(!menuOpen)}
             className="sm:hidden font-body font-bold text-sm text-brutal-primary cursor-pointer"
             aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
             aria-label="Toggle navigation"
           >
             {menuOpen ? 'CLOSE' : 'MENU'}
@@ -69,7 +70,7 @@ export default function Navbar() {
         </div>
 
         {menuOpen && (
-          <div className="sm:hidden border-t-[3px] border-brutal-primary flex flex-col">
+          <div id="mobile-menu" className="sm:hidden border-t-[3px] border-brutal-primary flex flex-col">
             {SECTIONS.map(({ id, label }) => (
               <a
                 key={id}
