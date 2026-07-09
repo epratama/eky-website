@@ -1,26 +1,32 @@
 # Resume Website — Design Spec
 
 **Date**: 2025-07-09
+**Last updated**: 2025-07-09 (v2 — post-launch)
 **Project**: Eky Pratama Resume Website
 **Goal**: Personal portfolio landing page showcasing 15+ years of software engineering experience
 
 ## Overview
 
-Single-page React SPA with AWS serverless contact form backend. Neo-brutalist visual style — bold, distinctive, animated, with hard borders, chunky shadows, and flat colors. Hosted on S3 + CloudFront via CloudFormation.
+Single-page React SPA with AWS serverless contact form backend. Neo-brutalist visual style — bold, distinctive, animated, with hard borders, chunky shadows, and flat colors. Hosted on S3 + CloudFront via CloudFormation, deployed with automated shell scripts.
 
 ## Architecture
 
 ```
-User → CloudFront (HTTPS) → S3 (static React build)
-                                 ↓
-User → hCaptcha → Lambda Function URL (Python) → SES → Eky's email
+User → Route53 (ekyputrapratama.com, www) → CloudFront (HTTPS, ACM cert) → S3 (static React build)
+                                                 ↓
+User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → Eky's email
+                                                    ↓
+                                    Origin check (ALLOWED_ORIGIN)
+                                    Rate limit (3 req/min/IP)
+                                    CORS restricted to domain
 ```
 
-- **Frontend**: React 18+ via Vite, no routing, anchor-scroll navigation
-- **Backend**: Python 3.12 Lambda, invoked via Function URL, validates + hCaptcha verify + SES send
-- **Infrastructure**: CloudFormation — S3 bucket, CloudFront distribution, Lambda function, IAM roles, SES configuration
+- **Frontend**: React 18+ via Vite, no routing, anchor-scroll navigation, 12 Vitest tests
+- **Backend**: Python 3.12 Lambda behind API Gateway HTTP API (Lambda::Url blocked by org policy). Validates + hCaptcha verify + SES send. Origin validation, rate limiting, restricted CORS. 13 pytest tests.
+- **Infrastructure**: CloudFormation — S3 bucket, CloudFront distribution with OAC, API Gateway HTTP API, Lambda function, IAM roles, SES configuration
+- **DNS**: Route53 hosted zone with ALIAS A records for root + www, SES domain verification, SPF, DKIM (3 keys), DMARC (p=none), MAIL FROM domain
 - **Resume data**: Static JSON file in frontend (single source of truth, easy to update)
-- **Testing**: Vitest + @testing-library/react + jsdom. 10 tests across 3 suites (App smoke, ContactForm validation, useScrollReveal hook). Run with `npm test`.
+- **Testing**: 42 tests total across 4 suites (12 frontend + 13 Lambda + 13 deploy + 17 CF template)
 
 ## Visual Design System
 
@@ -39,6 +45,7 @@ User → hCaptcha → Lambda Function URL (Python) → SES → Eky's email
 | Border radius | `0px` (default), `4px` on select elements |
 | Gradients | None |
 | Blur/opacity overlays | None |
+| Favicon | Inline SVG "EP" monogram — slate background, accent blue text |
 
 ### Typography
 
@@ -70,13 +77,14 @@ User → hCaptcha → Lambda Function URL (Python) → SES → Eky's email
 
 ## Page Sections
 
-### 1. Hero
+### 1. Home (id="home")
 - Asymmetric layout: text block offset left with accent geometric SVG on right
 - Name in Archivo 800, large (clamp 3rem→6rem)
 - Title: "Technical Lead & Senior Software Engineer"
 - Location: North Sydney, NSW
-- LinkedIn link with Lucide icon
-- Scroll-down indicator (animated arrow SVG)
+- LinkedIn + GitHub buttons side-by-side in flex row, identical brutalist style
+- Mobile: `min-h-[90vh] pt-20 pb-12`, desktop: `min-h-screen pt-24 pb-16`
+- Favicon: inline SVG "EP" monogram
 
 ### 2. Summary
 - Bordered card with offset shadow
@@ -90,10 +98,12 @@ User → hCaptcha → Lambda Function URL (Python) → SES → Eky's email
 - Scroll-triggered staggered reveal
 
 ### 4. Experience
-- Vertical timeline: left border "track" with role cards branching off
+- Vertical timeline: left border "track" with timeline nodes centered on border
+- Descending chronological order (most recent first)
+  - Swift Digital: October 2013 – Present (Technical Lead & Senior Software Engineer)
+  - Internetrix: November 2011 – January 2012 (Software Engineer Internship)
 - Each card: company/dates, role title, bullet points (collapsed, expand on click)
-- Current role (Swift Digital) prominently at top
-- Timeline nodes as accent-filled circles on the track
+- Timeline nodes as accent-filled circles straddling the border track
 
 ### 5. Skills
 - Grouped by category in bordered blocks:
@@ -120,23 +130,28 @@ User → hCaptcha → Lambda Function URL (Python) → SES → Eky's email
   - Message (required) — textarea
 - hCaptcha invisible — triggers on valid form submit
 - Validation: instant red border + bold error text (no animation)
-- Submit: black button, inverts on hover, shows loading state
+- Submit: black button, inverts on hover, shows `Loader2` spinner + "Sending..." on loading
 - Success: form replaced by bold confirmation message
 - Error: error state shown inline, user can retry
+
+### 8. Footer
+- Dark background (`#18181B`) with white text
+- Name, role title, LinkedIn + GitHub icon links (matched pair)
+- "Top" button scrolls to `#home`
 
 ## Responsive Breakpoints
 
 | Breakpoint | Layout |
 |---|---|
-| 375px (mobile) | Single column, stacked sections, smaller type |
+| 375px (mobile) | Single column, stacked, reduced Hero padding (`pt-20 pb-12`), `min-h-[90vh]` |
 | 768px (tablet) | 2-column grids where applicable |
 | 1024px (desktop) | Full layout with offsets, 3-column achievement grid |
 | 1440px+ | Max-width container 1280px, centered |
 
-## Backend (Lambda Python)
+## Backend (Lambda Python 3.12)
 
 ### API Endpoint
-`POST /` — Lambda Function URL
+`POST /` — API Gateway HTTP API (not Lambda Function URL — blocked by org policy)
 
 ### Request
 ```json
@@ -149,27 +164,84 @@ User → hCaptcha → Lambda Function URL (Python) → SES → Eky's email
 }
 ```
 
+### Security Layers
+
+| Layer | Implementation |
+|---|---|
+| **Origin check** | `ALLOWED_ORIGIN` env var — rejects requests from other domains (403 Forbidden) |
+| **Rate limiting** | 3 requests per minute per IP, sliding window (429 Too Many Requests) |
+| **CORS** | `Access-Control-Allow-Origin` restricted to `ALLOWED_ORIGIN` (not `*`) |
+| **hCaptcha** | Server-side token verification via hcaptcha.com |
+| **Input validation** | Name/email/message required, email format regex |
+| **HTML escaping** | `_esc()` sanitizes `& < > " '` before email rendering |
+| **Concurrency** | Lambda reserved concurrency: 5 |
+
+### Email
+
+- **From**: `Eky Pratama Portfolio <me@ekyputrapratama.com>` (display name + custom domain)
+- **Subject**: `Portfolio contact from {name} via ekyputrapratama.com`
+- **Body**: HTML + text/plain, includes contact details + source footer
+- **Authentication**: SPF (`include:amazonses.com + _spf.google.com`), DKIM (3 keys), DMARC (`p=none`)
+
 ### Flow
-1. Validate input (present, format, length)
-2. Verify hCaptcha token via `https://hcaptcha.com/siteverify`
-3. On success: send email via SES to configured recipient
-4. Return `{ success: true }` or `{ error: "message" }`
+1. Rate limit check (sliding window, 3/min/IP)
+2. Origin check against `ALLOWED_ORIGIN`
+3. Parse and validate JSON body
+4. Validate required fields + email format
+5. Verify hCaptcha token via `https://hcaptcha.com/siteverify`
+6. On success: send email via SES to configured recipient
+7. Return `{ success: true }` or `{ error: "message" }`
 
 ### Errors
-- 400: validation failure
-- 429: rate limit (Lambda reserved concurrency)
-- 500: SES/hCaptcha failure
+- 400: validation failure or hCaptcha rejection
+- 403: origin check failure
+- 429: rate limit exceeded
+- 500: SES send failure
 
 ## CloudFormation Resources
 
-| Resource | Type |
-|---|---|
-| S3Bucket | `AWS::S3::Bucket` — website hosting, public read via CloudFront OAI |
-| CloudFrontDistribution | `AWS::CloudFront::Distribution` — HTTPS, S3 origin, custom domain support |
-| LambdaFunction | `AWS::Lambda::Function` — Python 3.12, Function URL enabled |
-| LambdaInvokePermission | `AWS::Lambda::Permission` — Function URL public access |
-| SESConfiguration | `AWS::SES::ConfigurationSet` + verified identity |
-| IAMRole | Lambda execution: SES send + CloudWatch Logs |
+| Resource | Type | Purpose |
+|---|---|---|
+| WebsiteBucket | `AWS::S3::Bucket` | Static website hosting |
+| WebsiteBucketPolicy | `AWS::S3::BucketPolicy` | CloudFront OAC access |
+| CloudFrontDistribution | `AWS::CloudFront::Distribution` | HTTPS, HTTP/3, custom domain (+www aliases) |
+| CloudFrontOriginAccessControl | `AWS::CloudFront::OriginAccessControl` | OAC for S3 |
+| CloudFrontCachePolicy | `AWS::CloudFront::CachePolicy` | Optimized caching |
+| CloudFrontOriginRequestPolicy | `AWS::CloudFront::OriginRequestPolicy` | Origin request headers |
+| CloudFrontResponseHeadersPolicy | `AWS::CloudFront::ResponseHeadersPolicy` | Security headers |
+| LambdaExecutionRole | `AWS::IAM::Role` | Lambda permissions |
+| ContactFormFunction | `AWS::Lambda::Function` | Python 3.12, inline ZipFile code |
+| HttpApi | `AWS::ApiGatewayV2::Api` | HTTP API (replaces blocked Lambda::Url) |
+| HttpApiIntegration | `AWS::ApiGatewayV2::Integration` | Lambda proxy integration |
+| HttpApiRoute | `AWS::ApiGatewayV2::Route` | POST / |
+| HttpApiStage | `AWS::ApiGatewayV2::Stage` | $default, auto-deploy |
+| LambdaApiPermission | `AWS::Lambda::Permission` | API Gateway invoke permission |
+
+## Automation Scripts
+
+### deploy.sh
+Single command deploys everything: `./deploy.sh eky-website`
+
+1. Dependency check (aws, jq, npm)
+2. Stack existence check + current config display
+3. Interactive prompts (emails, hCaptcha, domain, cert)
+4. SES email verification check (send verification + poll if needed)
+5. **SES domain setup** (SPF, DKIM, DMARC, MAIL FROM) via Route53 — idempotent
+6. ACM certificate auto-detection (find issued cert, reuse)
+7. CloudFormation stack deploy
+8. Post-deploy validation (verify DomainName + CertificateArn applied)
+9. Frontend build with correct env vars
+10. S3 upload + CloudFront cache invalidation
+11. Route53 ALIAS record auto-configuration (skip if already correct)
+
+### deploy.sh (13 shell tests)
+Mock-based smoke tests covering: stack not found, full deploy, missing deps, cert auto-detect (issued/pending/not found), cert request, domain-without-cert blocking, Route53 (skip upsert / update / non-Route53), SES verification (verified / decline / verify).
+
+### test-template.sh (17 tests)
+Validates CloudFormation template: syntax check, all 14 resources present, all 6 parameters present, HCaptchaSecret marked NoEcho.
+
+### backend/test_lambda.py (13 pytest tests)
+Origin validation, rate limiting, CORS, input validation, JSON parsing, HTML escaping.
 
 ## What's Not Included
 

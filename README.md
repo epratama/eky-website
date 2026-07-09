@@ -117,6 +117,7 @@ Identified technical friction points and built automated guardrails into `deploy
 | **Skill invocation** | `ui-ux-pro-max` | Neo-brutalist design system (styles, palettes, fonts, spacing) |
 | **Skill invocation** | `ponytail` | Over-engineering audits: cut dead code, removed unused dependencies |
 | **Skill invocation** | `test-driven-development` | RED-GREEN-REFACTOR cycle: tests written before implementation |
+| **Process artifacts** | `docs/superpowers/specs/` + `docs/superpowers/plans/` | Full lifecycle from design spec to implementation plan — see [Development Artifacts](#development-artifacts) |
 
 ---
 
@@ -142,6 +143,19 @@ Identified technical friction points and built automated guardrails into `deploy
 | **Lambda security** | Origin rejection, rate limit (3/min then 429), CORS restriction, HTML escaping |
 | **Deploy flow** | Stack check, SES verify/decline/auto-verify, cert detect (issued/pending/none), cert request, Route53 DNS (skip/update/non-Route53) |
 | **CF template** | Syntax validation, 14 resources present, 6 parameters, secrets marked `NoEcho` |
+
+---
+
+## Development Artifacts
+
+This repo documents the full software engineering lifecycle — from design spec
+through implementation plan to tested, deployed code. These artifacts show the
+process behind the product:
+
+| Artifact | Description |
+|---|---|
+| [`docs/superpowers/specs/2025-07-09-resume-website-design.md`](docs/superpowers/specs/2025-07-09-resume-website-design.md) | **Design spec** — requirements, constraints, architecture decisions, neo-brutalism design tokens, responsive breakpoints, TDD strategy. 252 lines covering the "what and why" before code was written. |
+| [`docs/superpowers/plans/2025-07-09-resume-website.md`](docs/superpowers/plans/2025-07-09-resume-website.md) | **Implementation plan** — 20-task executable roadmap with file paths, dependencies, and test-first requirements. 2005 lines executed via TDD + subagent-driven-development. |
 
 ---
 
