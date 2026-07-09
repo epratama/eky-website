@@ -53,151 +53,106 @@ fi
 read -s -p "hCaptcha secret (leave empty to keep existing): " HCAPTCHA_SECRET
 echo ""
 
-# Custom domain (optional)
+# ====== Custom domain + cert ======
+find_cert_for_domain() {
+  local domain="$1"
+  echo "Searching for existing certificate for $domain..." >&2
+  local certs
+  certs=$(aws acm list-certificates \
+    --region us-east-1 \
+    --certificate-statuses ISSUED PENDING_VALIDATION \
+    --query "CertificateSummaryList[?DomainName=='$domain'].[CertificateArn,DomainName,Status]" \
+    --output text 2>/dev/null)
+  if [ -n "$certs" ]; then
+    local arn
+    arn=$(echo "$certs" | awk '{print $1}')
+    cert_status=$(echo "$certs" | awk '{print $NF}')
+    if [ "$cert_status" = "ISSUED" ]; then
+      echo "$arn"
+      return 0
+    elif [ "$cert_status" = "PENDING_VALIDATION" ]; then
+      echo "Certificate is still pending validation: $arn"
+      echo ""
+      echo "DNS validation records:"
+      aws acm describe-certificate \
+        --certificate-arn "$arn" \
+        --query 'Certificate.DomainValidationOptions[*].{Domain:DomainName,Name:ResourceRecord.Name,Type:ResourceRecord.Type,Value:ResourceRecord.Value}' \
+        --region us-east-1 \
+        --output table
+      echo ""
+      echo "Add these CNAMEs at your DNS provider and wait for validation, then re-run."
+      return 2
+    fi
+  fi
+  return 1
+}
+
+request_cert() {
+  local domain="$1"
+  echo "Requesting certificate for $domain and www.$domain..."
+  ARN=$(aws acm request-certificate \
+    --domain-name "$domain" \
+    --subject-alternative-names "www.$domain" \
+    --validation-method DNS \
+    --region us-east-1 \
+    --query 'CertificateArn' --output text)
+  echo "Certificate ARN: $ARN"
+  echo ""
+  echo "DNS validation records (add these at your DNS provider):"
+  aws acm describe-certificate \
+    --certificate-arn "$ARN" \
+    --query 'Certificate.DomainValidationOptions[*].{Domain:DomainName,Name:ResourceRecord.Name,Type:ResourceRecord.Type,Value:ResourceRecord.Value}' \
+    --region us-east-1 \
+    --output table
+  echo ""
+  echo "After adding these CNAMEs and waiting 5-10 min for validation, re-run:"
+  echo "  ./deploy.sh $STACK_NAME"
+  echo "  Domain name: $domain"
+  echo "  Certificate ARN: $ARN"
+  exit 1
+}
+
+# Custom domain prompt
+CERT_ARN=""
 if [ "$STACK_EXISTS" = true ] && [ -n "$EXISTING_DOMAIN" ]; then
   read -p "Custom domain [$EXISTING_DOMAIN]: " DOMAIN_NAME
   DOMAIN_NAME="${DOMAIN_NAME:-$EXISTING_DOMAIN}"
-  if [ -z "$EXISTING_CERT" ] || [ "$DOMAIN_NAME" != "$EXISTING_DOMAIN" ]; then
-    echo "Searching for existing certificate for $DOMAIN_NAME..."
-    EXISTING_CERTS=$(aws acm list-certificates \
-      --region us-east-1 \
-      --certificate-statuses ISSUED PENDING_VALIDATION \
-      --query "CertificateSummaryList[?DomainName=='$DOMAIN_NAME'].[CertificateArn,DomainName,Status]" \
-      --output text 2>/dev/null)
-    if [ -n "$EXISTING_CERTS" ]; then
-      ACM_ARN=$(echo "$EXISTING_CERTS" | awk '{print $1}')
-      ACM_STATUS=$(echo "$EXISTING_CERTS" | awk '{print $NF}')
-      if [ "$ACM_STATUS" = "ISSUED" ]; then
-        echo "Found issued certificate: $ACM_ARN"
-        echo "Using existing certificate."
-        CERT_ARN="$ACM_ARN"
-      elif [ "$ACM_STATUS" = "PENDING_VALIDATION" ]; then
-        echo "Certificate is still pending validation: $ACM_ARN"
-        echo ""
-        echo "DNS validation records:"
-        aws acm describe-certificate \
-          --certificate-arn "$ACM_ARN" \
-          --query 'Certificate.DomainValidationOptions[*].{Domain:DomainName,Name:ResourceRecord.Name,Type:ResourceRecord.Type,Value:ResourceRecord.Value}' \
-          --region us-east-1 \
-          --output table
-        echo ""
-        echo "Add these CNAMEs at your DNS provider and wait for validation, then re-run."
-        exit 1
-      fi
-    fi
-  fi
-  if [ -z "$CERT_ARN" ]; then
-    read -p "Certificate ARN [$EXISTING_CERT]: " CERT_ARN
-    CERT_ARN="${CERT_ARN:-$EXISTING_CERT}"
-    if [ -z "$CERT_ARN" ]; then
-      echo ""
-      read -p "No cert provided. Request one now? [Y/n]: " REQUEST_CERT
-      REQUEST_CERT=$(echo "${REQUEST_CERT:-y}" | tr '[:upper:]' '[:lower:]')
-      if [ "$REQUEST_CERT" = "y" ]; then
-        echo "Requesting certificate for $DOMAIN_NAME and www.$DOMAIN_NAME..."
-        ACM_ARN=$(aws acm request-certificate \
-          --domain-name "$DOMAIN_NAME" \
-          --subject-alternative-names "www.$DOMAIN_NAME" \
-          --validation-method DNS \
-          --region us-east-1 \
-          --query 'CertificateArn' --output text)
-        echo "Certificate ARN: $ACM_ARN"
-        echo ""
-        echo "DNS validation records (add these at your DNS provider):"
-        aws acm describe-certificate \
-          --certificate-arn "$ACM_ARN" \
-          --query 'Certificate.DomainValidationOptions[*].{Domain:DomainName,Name:ResourceRecord.Name,Type:ResourceRecord.Type,Value:ResourceRecord.Value}' \
-          --region us-east-1 \
-          --output table
-        echo ""
-        echo "After adding these CNAMEs and waiting 5-10 min for validation, re-run:"
-        echo "  ./deploy.sh $STACK_NAME"
-        echo "  Domain name: $DOMAIN_NAME"
-        echo "  Certificate ARN: $ACM_ARN"
-      else
-        echo ""
-        echo "Request one manually with:"
-        echo "  aws acm request-certificate --domain-name $DOMAIN_NAME --subject-alternative-names www.$DOMAIN_NAME --validation-method DNS --region us-east-1"
-      fi
-      exit 1
-    fi
-  fi
 else
   echo "Custom domain (optional — leave empty to skip):"
   read -p "Domain name: " DOMAIN_NAME
-  if [ -n "$DOMAIN_NAME" ]; then
-    # Search for existing certificate for this domain
-    if [ -z "$CERT_ARN" ]; then
-      echo "Searching for existing certificate for $DOMAIN_NAME..."
-      EXISTING_CERTS=$(aws acm list-certificates \
-        --region us-east-1 \
-        --certificate-statuses ISSUED PENDING_VALIDATION \
-        --query "CertificateSummaryList[?DomainName=='$DOMAIN_NAME'].[CertificateArn,DomainName,Status]" \
-        --output text 2>/dev/null)
-      if [ -n "$EXISTING_CERTS" ]; then
-        ACM_ARN=$(echo "$EXISTING_CERTS" | awk '{print $1}')
-        ACM_STATUS=$(echo "$EXISTING_CERTS" | awk '{print $NF}')
-        if [ "$ACM_STATUS" = "ISSUED" ]; then
-          echo "Found issued certificate: $ACM_ARN"
-          echo "Using existing certificate."
-          CERT_ARN="$ACM_ARN"
-        elif [ "$ACM_STATUS" = "PENDING_VALIDATION" ]; then
-          echo "Certificate is still pending validation: $ACM_ARN"
-          echo ""
-          echo "DNS validation records:"
-          aws acm describe-certificate \
-            --certificate-arn "$ACM_ARN" \
-            --query 'Certificate.DomainValidationOptions[*].{Domain:DomainName,Name:ResourceRecord.Name,Type:ResourceRecord.Type,Value:ResourceRecord.Value}' \
-            --region us-east-1 \
-            --output table
-          echo ""
-          echo "Add these CNAMEs at your DNS provider and wait for validation, then re-run."
-          echo ""
-          exit 1
-        fi
-      fi
-    fi
+fi
 
-    if [ -z "$CERT_ARN" ]; then
+if [ -n "$DOMAIN_NAME" ]; then
+  set +e
+  FOUND_CERT=$(find_cert_for_domain "$DOMAIN_NAME" 2>&1)
+  FIND_EXIT=$?
+  set -e
+  if [ "$FIND_EXIT" -eq 2 ]; then
+    echo "$FOUND_CERT"
+    exit 1
+  fi
+  if [ "$FIND_EXIT" -eq 0 ]; then
+    CERT_ARN=$(echo "$FOUND_CERT" | tail -1)
+    echo "Found issued certificate: $CERT_ARN"
+    echo "Using existing certificate."
+  else
+    echo "${FOUND_CERT:-No existing certificate found.}"
+    if [ "$STACK_EXISTS" = true ] && [ -n "$EXISTING_CERT" ]; then
+      read -p "Certificate ARN [$EXISTING_CERT]: " CERT_ARN
+      CERT_ARN="${CERT_ARN:-$EXISTING_CERT}"
+    else
       read -p "Certificate ARN (leave empty to request new): " CERT_ARN
     fi
     if [ -z "$CERT_ARN" ]; then
-      echo ""
-      read -p "No cert found. Request one now? [Y/n]: " REQUEST_CERT
+      read -p "Request certificate now? [Y/n]: " REQUEST_CERT
       REQUEST_CERT=$(echo "${REQUEST_CERT:-y}" | tr '[:upper:]' '[:lower:]')
       if [ "$REQUEST_CERT" = "y" ]; then
-        echo "Requesting certificate for $DOMAIN_NAME and www.$DOMAIN_NAME..."
-        ACM_ARN=$(aws acm request-certificate \
-          --domain-name "$DOMAIN_NAME" \
-          --subject-alternative-names "www.$DOMAIN_NAME" \
-          --validation-method DNS \
-          --region us-east-1 \
-          --query 'CertificateArn' --output text)
-        echo "Certificate ARN: $ACM_ARN"
-        echo ""
-        echo "DNS validation records (add these at your DNS provider):"
-        aws acm describe-certificate \
-          --certificate-arn "$ACM_ARN" \
-          --query 'Certificate.DomainValidationOptions[*].{Domain:DomainName,Name:ResourceRecord.Name,Type:ResourceRecord.Type,Value:ResourceRecord.Value}' \
-          --region us-east-1 \
-          --output table
-        echo ""
-        echo "After adding these CNAMEs and waiting 5-10 min for validation, re-run:"
-        echo "  ./deploy.sh $STACK_NAME"
-        echo "  Domain name: $DOMAIN_NAME"
-        echo "  Certificate ARN: $ACM_ARN"
-        echo ""
+        request_cert "$DOMAIN_NAME"
       else
-        echo ""
         echo "Request one manually:"
-        echo "  aws acm request-certificate \\"
-        echo "    --domain-name $DOMAIN_NAME \\"
-        echo "    --subject-alternative-names www.$DOMAIN_NAME \\"
-        echo "    --validation-method DNS \\"
-        echo "    --region us-east-1"
-        echo ""
+        echo "  aws acm request-certificate --domain-name $DOMAIN_NAME --subject-alternative-names www.$DOMAIN_NAME --validation-method DNS --region us-east-1"
+        exit 1
       fi
-      exit 1
     fi
   fi
 fi
@@ -209,6 +164,14 @@ PARAMS+=(ParameterKey=SenderEmail,ParameterValue="$SENDER_EMAIL")
 PARAMS+=(ParameterKey=RecipientEmail,ParameterValue="$RECIPIENT_EMAIL")
 if [ -n "$HCAPTCHA_SECRET" ]; then
   PARAMS+=(ParameterKey=HCaptchaSecret,ParameterValue="$HCAPTCHA_SECRET")
+fi
+
+# Validate domain + cert consistency
+if [ -n "$DOMAIN_NAME" ] && [ -z "$CERT_ARN" ]; then
+  echo ""
+  echo "ERROR: Domain name is set but no valid certificate ARN was provided."
+  echo "You need an ISSUED ACM certificate in us-east-1 before deploying with a custom domain."
+  exit 1
 fi
 if [ -n "$DOMAIN_NAME" ] && [ -n "$CERT_ARN" ]; then
   PARAMS+=(ParameterKey=DomainName,ParameterValue="$DOMAIN_NAME")
@@ -223,6 +186,21 @@ aws cloudformation deploy \
   --stack-name "$STACK_NAME" \
   --parameter-overrides "${PARAMS[@]}" \
   --capabilities CAPABILITY_IAM
+
+# Verify params applied
+if [ -n "$DOMAIN_NAME" ]; then
+  STACK_DOMAIN=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+    --query "Stacks[0].Parameters[?ParameterKey=='DomainName'].ParameterValue" --output text 2>/dev/null)
+  STACK_CERT=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+    --query "Stacks[0].Parameters[?ParameterKey=='CertificateArn'].ParameterValue" --output text 2>/dev/null)
+  if [ "$STACK_DOMAIN" != "$DOMAIN_NAME" ] || [ "$STACK_CERT" != "$CERT_ARN" ]; then
+    echo ""
+    echo "WARNING: Domain/cert params may not have applied correctly."
+    echo "  Expected domain: $DOMAIN_NAME, got: $STACK_DOMAIN"
+    echo "  Expected cert:   $CERT_ARN, got: $STACK_CERT"
+    echo "  Check your hCaptcha secret and re-run."
+  fi
+fi
 
 # Fetch outputs
 DATA=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --output json)

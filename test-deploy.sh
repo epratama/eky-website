@@ -39,11 +39,7 @@ case "$2" in
     echo "$MOCK_ZONES"
     ;;
   list-resource-record-sets)
-    if echo "$*" | grep -q "www"; then
-      echo "$MOCK_WWW_DNS"
-    else
-      echo "$MOCK_ROOT_DNS"
-    fi
+    if echo "$*" | grep -q "www"; then echo "$MOCK_WWW_DNS"; else echo "$MOCK_ROOT_DNS"; fi
     ;;
   change-resource-record-sets)
     echo "mock route53 ok"
@@ -56,7 +52,7 @@ MOCK
   cat > "$MOCK_DIR/jq" << 'MOCK'
 #!/bin/bash
 filter="${2:-$1}"
-cat > /dev/null  # consume stdin (JSON data)
+cat > /dev/null
 case "$filter" in
   *S3Bucket*)               echo "$MOCK_S3" ;;
   *LambdaURL*)              echo "$MOCK_API" ;;
@@ -74,7 +70,7 @@ MOCK
 
   cat > "$MOCK_DIR/npm" << 'MOCK'
 #!/bin/bash
-echo "mock build ok"
+exit 0
 MOCK
   chmod +x "$MOCK_DIR/npm"
 }
@@ -108,7 +104,7 @@ if output=$(echo "" | bash "$DEPLOY_SCRIPT" no-such-stack 2>&1); then
   red "should exit 1" "exited 0"
 else
   if echo "$output" | grep -q "does not exist"; then
-    green "stack not found → creates new"
+    green "stack not found -> creates new"
   else
     red "wrong message" "$output"
   fi
@@ -116,13 +112,12 @@ fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
 trap - EXIT
 
-# Test 2: Stack exists, full deploy flow
+# Test 2: Stack exists, no domain, full deploy
 echo ""
-echo "--- Stack exists → deploy ---"
+echo "--- Stack exists -> deploy ---"
 setup_mock_env
 set_mock_defaults
 export MOCK_DOMAIN=""
-# 4 newlines: sender (accept), recipient (accept), secret (empty), domain (empty)
 if output=$(printf '\n\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
   if echo "$output" | grep -q "Stack 'test-stack' exists"; then
     green "shows config and deploys"
@@ -147,59 +142,18 @@ else
 fi
 rm -rf "$MOCK_DIR"
 
-# Test 4a: Cert helper — auto-request with "y"
-echo ""
-echo "--- Cert helper (auto-request) ---"
-setup_mock_env
-set_mock_defaults
-export MOCK_DOMAIN=""
-export MOCK_CERT_LIST=""
-# 6 lines: sender, recipient, secret, domain, cert(empty), y
-if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
-  red "should exit 1 (no cert yet)" "exited 0"
-else
-  if echo "$output" | grep -q "Searching for existing certificate"; then
-    green "auto-requests cert and shows DNS records"
-  else
-    red "missing cert request output" "$output"
-  fi
-fi
-rm -rf "$MOCK_DIR" 2>/dev/null || true
-trap - EXIT
-
-# Test 4b: Cert helper — manual
-echo ""
-echo "--- Cert helper (manual) ---"
-setup_mock_env
-set_mock_defaults
-export MOCK_DOMAIN=""
-export MOCK_CERT_LIST=""
-# cert empty then n at request prompt
-if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\nn\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
-  red "should exit 1" "exited 0"
-else
-  if echo "$output" | grep -q "Request one manually:"; then
-    green "shows manual cert request instructions"
-  else
-    red "missing manual instructions" "$output"
-  fi
-fi
-rm -rf "$MOCK_DIR" 2>/dev/null || true
-trap - EXIT
-
-# Test 4c: Auto-detect existing issued cert
+# Test 4: Auto-detect issued cert + deploy
 echo ""
 echo "--- Auto-detect issued cert ---"
 setup_mock_env
 set_mock_defaults
-export MOCK_DOMAIN=""
 export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
-# 4 lines: sender, recipient, secret, domain (cert auto-detected, skips cert prompt)
+export MOCK_DOMAIN=""
 if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
-  if echo "$output" | grep -q "Using existing certificate"; then
-    green "auto-detects and reuses issued cert"
+  if echo "$output" | grep -q "Found issued certificate"; then
+    green "auto-detects and uses issued cert"
   else
-    red "did not reuse cert" "$output"
+    red "did not find cert" "$output"
   fi
 else
   red "deploy failed" "$output"
@@ -207,12 +161,13 @@ fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
 trap - EXIT
 
-# Test 4d: Pending validation cert
+# Test 5: Pending cert -> exits with DNS records
 echo ""
-echo "--- Pending validation cert ---"
+echo "--- Pending cert -> exit ---"
 setup_mock_env
 set_mock_defaults
-export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tPENDING_VALIDATION'
+export MOCK_CERT_LIST=$'arn:abc\tPENDING_VALIDATION'
+export MOCK_DOMAIN=""
 if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
   red "should exit 1" "exited 0"
 else
@@ -225,7 +180,45 @@ fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
 trap - EXIT
 
-# Test 5a: Route53 auto-config (records already exist)
+# Test 6: No cert found -> request new
+echo ""
+echo "--- No cert -> request new ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_CERT_LIST=""
+export MOCK_DOMAIN=""
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\ny\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  red "should exit 1 (requested new cert)" "exited 0"
+else
+  if echo "$output" | grep -q "Requesting certificate"; then
+    green "requests new cert when none found"
+  else
+    red "did not request cert" "$output"
+  fi
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 7: No cert -> decline request -> blocked
+echo ""
+echo "--- No cert -> decline -> blocked ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_CERT_LIST=""
+export MOCK_DOMAIN=""
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\nn\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  red "should exit 1" "exited 0"
+else
+  if echo "$output" | grep -q "Request one manually"; then
+    green "shows manual instructions and exits when cert declined"
+  else
+    red "wrong message" "$output"
+  fi
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 8: Route53 records already correct
 echo ""
 echo "--- Route53 records already correct ---"
 setup_mock_env
@@ -235,7 +228,7 @@ export MOCK_ZONES=$'/hostedzone/Z123\texample.com.'
 export MOCK_DOMAIN="example.com"
 export MOCK_ROOT_DNS="test.cloudfront.net."
 export MOCK_WWW_DNS="test.cloudfront.net."
-if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
   if echo "$output" | grep -q "already correct"; then
     green "detects existing records, skips upsert"
   else
@@ -247,7 +240,7 @@ fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
 trap - EXIT
 
-# Test 5b: Route53 auto-config (records need update)
+# Test 9: Route53 records need update
 echo ""
 echo "--- Route53 records updated ---"
 setup_mock_env
@@ -257,7 +250,7 @@ export MOCK_ZONES=$'/hostedzone/Z123\texample.com.'
 export MOCK_DOMAIN="example.com"
 export MOCK_ROOT_DNS="old.cloudfront.net."
 export MOCK_WWW_DNS=""
-if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
   if echo "$output" | grep -q "Route53 records updated"; then
     green "upserts records when outdated/missing"
   else
@@ -269,7 +262,7 @@ fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
 trap - EXIT
 
-# Test 5c: Non-Route53 domain
+# Test 10: Non-Route53 domain
 echo ""
 echo "--- Non-Route53 domain ---"
 setup_mock_env
@@ -277,7 +270,7 @@ set_mock_defaults
 export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
 export MOCK_ZONES=""
 export MOCK_DOMAIN="example.com"
-if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
   if echo "$output" | grep -q "not found in Route53"; then
     green "shows manual DNS instructions for non-Route53 domain"
   else
