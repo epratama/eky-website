@@ -6,7 +6,7 @@ export default function SkillGroup({ group, index }) {
   return (
     <div
       ref={ref}
-      className={`border-[3px] border-brutal-primary bg-white p-5 hover:shadow-brutal-lg transition-shadow duration-200 cursor-pointer ${
+      className={`border-[3px] border-brutal-primary bg-white p-5 hover:shadow-brutal-lg transition-all duration-200 ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
       }`}
       style={{ transitionDelay: `${index * 60}ms` }}
@@ -18,7 +18,7 @@ export default function SkillGroup({ group, index }) {
         {group.items.map((item, i) => (
           <span
             key={i}
-            className="inline-block border-[2px] border-brutal-primary px-2.5 py-1 font-body text-xs font-semibold text-brutal-primary hover:bg-brutal-primary hover:text-brutal-bg transition-colors duration-150 cursor-pointer"
+            className="inline-block border-[2px] border-brutal-primary px-2.5 py-1 font-body text-xs font-semibold text-brutal-primary hover:bg-brutal-primary hover:text-brutal-bg transition-colors duration-150"
           >
             {item}
           </span>
