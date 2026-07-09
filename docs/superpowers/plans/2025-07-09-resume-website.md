@@ -26,16 +26,17 @@
 > ### Frontend component divergences (Tasks 1-15)
 > - `Navbar`: section `hero` → `home`, added `aria-controls` and `id="mobile-menu"` for a11y
 > - `Hero`: added GitHub button (plan had LinkedIn only), `min-h-[90vh]` responsive classes, `DecorativeShapes` dropped variant prop
-> - `Footer`: added `role` + `github` props, GitHub icon link (plan had LinkedIn only)
+> - `Footer`: added `role` + `github` props, GitHub icon link, back-to-top `#hero` → `#home` (plan had LinkedIn only)
 > - `DecorativeShapes`: removed `variant` prop — always renders hero SVG
 > - `ExperienceCard`: timeline dot centered on border via `-translate-x-[calc(50%+1.5px)] -translate-y-1/2`, null-safe `role.highlights?.length`, `cursor-pointer` removed
-> - `SkillGroup`: removed `cursor-pointer`, `transition-shadow` → `transition-all`
+> - `SkillGroup`: removed `cursor-pointer` on parent + tags, `transition-shadow` → `transition-all`
+> - `AchievementCard`: removed `cursor-pointer`
 > - `ContactForm`: uses `formRef = useRef(form); formRef.current = form` pattern to avoid stale closure
 > - `App`: `<Footer>` passes `role={resume.title}` and `github={resume.github}`
 > - `useScrollReveal`: hardcoded threshold/rootMargin instead of destructured defaults, `useEffect` depends on `[]`
 > 
 > ### Data divergences (Task 2)
-> - `resume.json`: added `github` field, `title` → `"Technical Lead & Senior Software Engineer"`, summary updated
+> - `resume.json`: added `github` field, second experience entry (Internetrix internship), `title` → `"Technical Lead & Senior Software Engineer"`, summary updated
 > - `index.html`: title/description updated to "Technical Lead & Senior Software Engineer", inline SVG favicon added
 > - `package.json`: added `vitest`, `jsdom`, `@testing-library/*` devDeps + `"test": "vitest run"` script
 > 

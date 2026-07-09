@@ -285,7 +285,7 @@ Resources:
                   f'<p style="font-size:12px;color:#71717A">Sent via contact form at {_esc(subject_domain)}</p>'
                   '</body></html>'
               )
-              text_body = f"Name: {name}\nEmail: {email}\n{mobile_line}\n\n{message}"
+              text_body = f"Name: {name}\nEmail: {email}\n{mobile_line}\n\n{message}\n\n--\nSent via contact form at {subject_domain}"
               try:
                   ses.send_email(Source=from_addr, Destination={"ToAddresses": [RECIPIENT_EMAIL]}, Message={"Subject": {"Data": f"Portfolio contact from {name} via {subject_domain}"}, "Body": {"Html": {"Data": html_body}, "Text": {"Data": text_body}}})
               except Exception as e:
