@@ -272,6 +272,9 @@ Outputs:
   WebsiteURL:
     Description: CloudFront URL
     Value: !Sub "https://${CloudFrontDistribution.DomainName}"
+  CloudFrontDistributionId:
+    Description: CloudFront distribution ID
+    Value: !Ref CloudFrontDistribution
   LambdaURL:
     Description: Contact form API endpoint
     Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
