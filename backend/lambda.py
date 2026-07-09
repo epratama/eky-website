@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 import urllib.request
 import urllib.parse
 from http import HTTPStatus
@@ -10,13 +11,44 @@ import boto3
 RECIPIENT_EMAIL = os.environ["RECIPIENT_EMAIL"]
 SENDER_EMAIL = os.environ["SENDER_EMAIL"]
 HCAPTCHA_SECRET = os.environ["HCAPTCHA_SECRET"]
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "")
+DOMAIN_NAME = os.environ.get("DOMAIN_NAME", "")
 HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify"
 
 ses = boto3.client("ses")
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+rate_store = {}
+
+
+def _check_origin(headers):
+    if not ALLOWED_ORIGIN:
+        return True
+    origin = (headers or {}).get("origin", "")
+    referer = (headers or {}).get("referer", "")
+    return ALLOWED_ORIGIN in origin or ALLOWED_ORIGIN.replace("https://", "") in referer
+
+
+def _rate_limit(ip):
+    now = time.time()
+    window = rate_store.get(ip, [])
+    window = [t for t in window if now - t < 60]
+    if len(window) >= 3:
+        return False
+    window.append(now)
+    rate_store[ip] = window
+    return True
 
 
 def handler(event, context):
+    headers = {k.lower(): v for k, v in event.get("headers", {}).items()}
+    source_ip = (headers.get("x-forwarded-for") or "unknown").split(",")[0].strip()
+
+    if not _rate_limit(source_ip):
+        return _error("Too many requests. Please wait.", HTTPStatus.TOO_MANY_REQUESTS)
+
+    if not _check_origin(headers):
+        return _error("Forbidden", HTTPStatus.FORBIDDEN)
+
     try:
         body = json.loads(event.get("body", "{}"))
     except json.JSONDecodeError:
@@ -58,14 +90,14 @@ def handler(event, context):
 </html>"""
 
     text_body = f"Name: {name}\nEmail: {email}\n{mobile_line}\n\n{message}"
+    subject_domain = DOMAIN_NAME or "contact form"
 
     try:
         ses.send_email(
             Source=SENDER_EMAIL,
             Destination={"ToAddresses": [RECIPIENT_EMAIL]},
             Message={
-                "Subject": {"Data": f"Contact from {name} via contact form"},
-
+                "Subject": {"Data": f"Contact from {name} via {subject_domain}"},
                 "Body": {
                     "Html": {"Data": html_body},
                     "Text": {"Data": text_body},
@@ -96,7 +128,7 @@ def _error(message, status_code):
 
 def _cors_headers():
     return {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": ALLOWED_ORIGIN or "*",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
     }
@@ -108,4 +140,5 @@ def _esc(s):
         .replace("<", "&lt;")
         .replace(">", "&gt;")
         .replace('"', "&quot;")
+        .replace("'", "&#x27;")
     )
