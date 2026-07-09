@@ -193,6 +193,15 @@ aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*" --o
 echo ""
 if [ -n "$DOMAIN" ]; then
   echo "=== Done: https://$DOMAIN ==="
+  echo ""
+  echo "DNS records needed (add at your provider if not already set):"
+  echo "  $DOMAIN           CNAME  $DIST_DOMAIN"
+  echo "  www.$DOMAIN       CNAME  $DIST_DOMAIN"
+  if echo "$DOMAIN" | grep -q "\.com$"; then
+    echo ""
+    echo "Note: some DNS providers don't support CNAME at the root."
+    echo "Use ALIAS/ANAME record, or set up a redirect from $DOMAIN to www.$DOMAIN."
+  fi
 else
   echo "=== Done: https://$DIST_DOMAIN ==="
 fi
