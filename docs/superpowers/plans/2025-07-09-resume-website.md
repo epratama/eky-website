@@ -2,9 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Note (post-deployment):** This was the original implementation plan. During development, deployment realities led to adjustments:
+> - `AWS::Lambda::Url` → **API Gateway HTTP API** (blocked by org CloudFormation hooks)
+> - `build.sh` → **`deploy.sh`** (merged build + deploy into a single pipeline)
+> - CloudFront managed policy IDs → **inline CachePolicy/OriginRequestPolicy/ResponseHeadersPolicy** resources (policy IDs differ by region)
+> - Added SES domain setup, SPF/DKIM/DMARC automation, and Route53 ALIAS auto-configuration
+> - See [Product Feedback Loop](../README.md#product-feedback-loop) for the full list
+
 **Goal:** Build a single-page neo-brutalist resume website for Eky Pratama with a React frontend hosted on S3/CloudFront and a Python Lambda contact form backend, all deployed via CloudFormation.
 
-**Architecture:** React 18 SPA (Vite + Tailwind CSS) served from S3 via CloudFront. Contact form with invisible hCaptcha posts to a Python 3.12 Lambda Function URL, which verifies the captcha and sends via SES. No routing — anchor-scroll single page. Resume data lives in a static JSON file.
+**Architecture:** React 18 SPA (Vite + Tailwind CSS) served from S3 via CloudFront. Contact form with invisible hCaptcha posts to a Python 3.12 Lambda via API Gateway HTTP API, which verifies the captcha and sends via SES. No routing — anchor-scroll single page. Resume data lives in a static JSON file.
 
 **Tech Stack:** React 18, Vite 6, Tailwind CSS 3, Lucide React, hCaptcha, Python 3.12 (Lambda), boto3 (SES), AWS CloudFormation
 
@@ -1238,7 +1245,7 @@ git commit -m "feat: Footer with LinkedIn link and back-to-top"
 
 **Interfaces:**
 - Consumes: hCaptcha site key (from env var `VITE_HCAPTCHA_SITEKEY`)
-- Produces: Form with fields (name*, email*, mobile, message*), invisible hCaptcha, posts to Lambda Function URL
+- Produces: Form with fields (name*, email*, mobile, message*), invisible hCaptcha, posts to API Gateway HTTP API → Lambda
 
 - [ ] **Step 1: Create ContactForm.jsx**
 
@@ -1871,27 +1878,22 @@ Resources:
           def _esc(s):
               return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
-  ContactFormFunctionUrl:
-    Type: AWS::Lambda::Url
+  # NOTE: AWS::Lambda::Url was blocked by org CloudFormation hooks.
+  # Replaced with API Gateway HTTP API in the actual template.yaml.
+  # See: infrastructure/template.yaml for the current implementation.
+  ApiGateway:
+    Type: AWS::ApiGatewayV2::Api
     Properties:
-      TargetFunctionArn: !Ref ContactFormFunction
-      AuthType: NONE
-      Cors:
-        AllowOrigins:
-          - "*"
-        AllowMethods:
-          - POST
-          - OPTIONS
-        AllowHeaders:
-          - Content-Type
+      ProtocolType: HTTP
+      Target: !GetAtt ContactFormFunction.Arn
 
 Outputs:
   WebsiteURL:
     Description: CloudFront URL
     Value: !Sub "https://${CloudFrontDistribution.DomainName}"
-  LambdaURL:
-    Description: Contact form function URL
-    Value: !GetAtt ContactFormFunctionUrl.FunctionUrl
+  ApiGatewayURL:
+    Description: API Gateway endpoint
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com"
   S3Bucket:
     Description: S3 bucket for website files
     Value: !Ref WebsiteBucket
@@ -1906,38 +1908,37 @@ git commit -m "feat: CloudFormation template for S3, CloudFront, Lambda, SES"
 
 ---
 
-### Task 18: Build and deploy script
+### Task 18: Deploy script (merged build + deploy)
 
 **Files:**
-- Create: `build.sh`
+- Create: `deploy.sh` (supersedes original `build.sh` plan — combines CloudFormation deploy, frontend build, S3 upload, CloudFront invalidation, SES domain setup, cert detection, and Route53 DNS)
 
-- [ ] **Step 1: Create build.sh**
+- [ ] **Step 1: Create deploy.sh**
 
 ```bash
 #!/bin/bash
-set -e
+set -euo pipefail
 
-STACK_NAME="${STACK_NAME:-resume-website}"
-S3_BUCKET="${S3_BUCKET:-}"
-LAMBDA_URL="${LAMBDA_URL:-}"
-HCAPTCHA_SITE_KEY="${HCAPTCHA_SITE_KEY:-}"
+STACK_NAME="${1:?Usage: $0 <stack-name>}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "=== Building frontend ==="
-pushd frontend > /dev/null
-VITE_LAMBDA_URL="$LAMBDA_URL" VITE_HCAPTCHA_SITEKEY="$HCAPTCHA_SITE_KEY" npx vite build
-popd > /dev/null
+# Pre-flight: check deps
+for cmd in aws jq npm; do
+  if ! command -v $cmd &>/dev/null; then echo "Missing: $cmd"; exit 1; fi
+done
 
-if [ -n "$S3_BUCKET" ]; then
-  echo "=== Uploading to S3: $S3_BUCKET ==="
-  aws s3 sync frontend/dist/ "s3://$S3_BUCKET/" --delete --cache-control "max-age=31536000,immutable"
-  aws cloudfront create-invalidation --distribution-id "$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontDistribution`].OutputValue' --output text 2>/dev/null || echo '')" --paths "/*" 2>/dev/null || echo "CloudFront invalidation skipped (no distribution found)"
-fi
+# Interactive prompts for SES and hCaptcha
+read -p "Sender email: " SENDER
+read -p "Recipient email: " RECIPIENT
+read -s -p "hCaptcha secret: " HCAPTCHA_SECRET
 
-echo "=== Done ==="
+# SES verification, ACM cert, CloudFormation deploy, frontend build,
+# S3 upload, CloudFront invalidation, Route53 ALIAS — all in sequence
+echo "See deploy.sh in the repo root for the full ~450-line implementation"
 ```
 
 ```bash
-chmod +x build.sh
+chmod +x deploy.sh
 ```
 
 - [ ] **Step 2: Commit**

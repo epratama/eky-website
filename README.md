@@ -174,7 +174,7 @@ process behind the product:
 | Artifact | Description |
 |---|---|
 | [`docs/superpowers/specs/2025-07-09-resume-website-design.md`](docs/superpowers/specs/2025-07-09-resume-website-design.md) | **Design spec** — requirements, constraints, architecture decisions, neo-brutalism design tokens, responsive breakpoints, TDD strategy. 252 lines covering the "what and why" before code was written. |
-| [`docs/superpowers/plans/2025-07-09-resume-website.md`](docs/superpowers/plans/2025-07-09-resume-website.md) | **Implementation plan** — 20-task executable roadmap with file paths, dependencies, and test-first requirements. 2005 lines executed via TDD + subagent-driven-development. |
+| [`docs/superpowers/plans/2025-07-09-resume-website.md`](docs/superpowers/plans/2025-07-09-resume-website.md) | **Implementation plan** — 20-task executable roadmap with file paths, dependencies, and test-first requirements. 2006 lines executed via TDD + subagent-driven-development. |
 
 ---
 
