@@ -35,6 +35,12 @@ case "$2" in
   describe-certificate|request-certificate)
     echo ""
     ;;
+  list-hosted-zones)
+    echo "$MOCK_ZONES"
+    ;;
+  change-resource-record-sets)
+    echo "mock route53 ok"
+    ;;
   *) exit 0 ;;
 esac
 MOCK
@@ -78,6 +84,7 @@ set_mock_defaults() {
   export MOCK_DOMAIN=""
   export MOCK_CERT=""
   export MOCK_CERT_LIST=""
+  export MOCK_ZONES=""
 }
 
 # --- Tests ---
@@ -205,6 +212,51 @@ else
   else
     red "did not handle pending cert" "$output"
   fi
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 5a: Route53 auto-config
+echo ""
+echo "--- Route53 auto-config ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
+export MOCK_ZONES=$'/hostedzone/Z123\texample.com.'
+# need DOMAIN set for jq to return it — jq mock returns MOCK_DOMAIN which is ""
+# Actually, the DomainName parameter is read from CF params after deploy
+# For this test, the domain is example.com (entered by user), MOCK_DOMAIN is set by jq mock
+# But jq returns "" for DomainName since MOCK_DOMAIN=""
+# Let me set MOCK_DOMAIN to something for this test
+export MOCK_DOMAIN="example.com"
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "Route53 zone found"; then
+    green "auto-configures Route53 ALIAS records"
+  else
+    red "did not configure Route53" "$output"
+  fi
+else
+  red "deploy failed" "$output"
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 5b: Non-Route53 domain
+echo ""
+echo "--- Non-Route53 domain ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
+export MOCK_ZONES=""
+export MOCK_DOMAIN="example.com"
+if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "not found in Route53"; then
+    green "shows manual DNS instructions for non-Route53 domain"
+  else
+    red "missing manual instructions" "$output"
+  fi
+else
+  red "deploy failed" "$output"
 fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
 trap - EXIT

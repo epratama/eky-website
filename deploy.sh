@@ -57,8 +57,39 @@ echo ""
 if [ "$STACK_EXISTS" = true ] && [ -n "$EXISTING_DOMAIN" ]; then
   read -p "Custom domain [$EXISTING_DOMAIN]: " DOMAIN_NAME
   DOMAIN_NAME="${DOMAIN_NAME:-$EXISTING_DOMAIN}"
-  read -p "Certificate ARN [$EXISTING_CERT]: " CERT_ARN
-  CERT_ARN="${CERT_ARN:-$EXISTING_CERT}"
+  if [ -z "$EXISTING_CERT" ] || [ "$DOMAIN_NAME" != "$EXISTING_DOMAIN" ]; then
+    echo "Searching for existing certificate for $DOMAIN_NAME..."
+    EXISTING_CERTS=$(aws acm list-certificates \
+      --region us-east-1 \
+      --certificate-statuses ISSUED PENDING_VALIDATION \
+      --query "CertificateSummaryList[?DomainName=='$DOMAIN_NAME'].[CertificateArn,DomainName,Status]" \
+      --output text 2>/dev/null)
+    if [ -n "$EXISTING_CERTS" ]; then
+      ACM_ARN=$(echo "$EXISTING_CERTS" | awk '{print $1}')
+      ACM_STATUS=$(echo "$EXISTING_CERTS" | awk '{print $NF}')
+      if [ "$ACM_STATUS" = "ISSUED" ]; then
+        echo "Found issued certificate: $ACM_ARN"
+        echo "Using existing certificate."
+        CERT_ARN="$ACM_ARN"
+      elif [ "$ACM_STATUS" = "PENDING_VALIDATION" ]; then
+        echo "Certificate is still pending validation: $ACM_ARN"
+        echo ""
+        echo "DNS validation records:"
+        aws acm describe-certificate \
+          --certificate-arn "$ACM_ARN" \
+          --query 'Certificate.DomainValidationOptions[*].{Domain:DomainName,Name:ResourceRecord.Name,Type:ResourceRecord.Type,Value:ResourceRecord.Value}' \
+          --region us-east-1 \
+          --output table
+        echo ""
+        echo "Add these CNAMEs at your DNS provider and wait for validation, then re-run."
+        exit 1
+      fi
+    fi
+  fi
+  if [ -z "$CERT_ARN" ]; then
+    read -p "Certificate ARN [$EXISTING_CERT]: " CERT_ARN
+    CERT_ARN="${CERT_ARN:-$EXISTING_CERT}"
+  fi
 else
   echo "Custom domain (optional — leave empty to skip):"
   read -p "Domain name: " DOMAIN_NAME
@@ -192,16 +223,54 @@ aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*" --o
 
 echo ""
 if [ -n "$DOMAIN" ]; then
-  echo "=== Done: https://$DOMAIN ==="
-  echo ""
-  echo "DNS records needed (add at your provider if not already set):"
-  echo "  $DOMAIN           CNAME  $DIST_DOMAIN"
-  echo "  www.$DOMAIN       CNAME  $DIST_DOMAIN"
-  if echo "$DOMAIN" | grep -q "\.com$"; then
-    echo ""
-    echo "Note: some DNS providers don't support CNAME at the root."
-    echo "Use ALIAS/ANAME record, or set up a redirect from $DOMAIN to www.$DOMAIN."
+  echo "=== Configuring DNS ==="
+  ZONE_ID=$(aws route53 list-hosted-zones \
+    --query "HostedZones[?Name=='$DOMAIN'.]|[0].Id" \
+    --output text 2>/dev/null | sed 's|/hostedzone/||')
+  if [ -n "$ZONE_ID" ] && [ "$ZONE_ID" != "None" ]; then
+    echo "Route53 zone found: $ZONE_ID"
+    echo "Upserting ALIAS A records pointing to $DIST_DOMAIN..."
+    aws route53 change-resource-record-sets \
+      --hosted-zone-id "$ZONE_ID" \
+      --change-batch "{
+        \"Changes\": [
+          {
+            \"Action\": \"UPSERT\",
+            \"ResourceRecordSet\": {
+              \"Name\": \"$DOMAIN\",
+              \"Type\": \"A\",
+              \"AliasTarget\": {
+                \"HostedZoneId\": \"Z2FDTNDATAQYW2\",
+                \"DNSName\": \"$DIST_DOMAIN\",
+                \"EvaluateTargetHealth\": false
+              }
+            }
+          },
+          {
+            \"Action\": \"UPSERT\",
+            \"ResourceRecordSet\": {
+              \"Name\": \"www.$DOMAIN\",
+              \"Type\": \"A\",
+              \"AliasTarget\": {
+                \"HostedZoneId\": \"Z2FDTNDATAQYW2\",
+                \"DNSName\": \"$DIST_DOMAIN\",
+                \"EvaluateTargetHealth\": false
+              }
+            }
+          }
+        ]
+      }" --output text --no-cli-pager
+    echo "Route53 records updated."
+  else
+    echo "Domain not found in Route53. Add manually:"
+    echo "  $DOMAIN           CNAME  $DIST_DOMAIN"
+    echo "  www.$DOMAIN       CNAME  $DIST_DOMAIN"
+    if echo "$DOMAIN" | grep -q "\.com$"; then
+      echo "  Note: providers that block CNAME at root need ALIAS/ANAME."
+    fi
   fi
+  echo ""
+  echo "=== Done: https://$DOMAIN ==="
 else
   echo "=== Done: https://$DIST_DOMAIN ==="
 fi
