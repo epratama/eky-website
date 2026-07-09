@@ -58,7 +58,7 @@ verify_ses_email() {
   local email="$1"
   local status
   status=$(aws ses get-identity-verification-attributes --identities "$email" \
-    --query "VerificationAttributes['$email'].VerificationStatus" --output text 2>/dev/null)
+    --query "VerificationAttributes.\"$email\".VerificationStatus" --output text 2>/dev/null)
   if [ "$status" = "Success" ]; then
     echo "  $email: verified"
     return 0
@@ -76,7 +76,7 @@ verify_ses_email() {
   for i in $(seq 1 30); do
     sleep 5
     status=$(aws ses get-identity-verification-attributes --identities "$email" \
-      --query "VerificationAttributes['$email'].VerificationStatus" --output text 2>/dev/null)
+      --query "VerificationAttributes.\"$email\".VerificationStatus" --output text 2>/dev/null)
     if [ "$status" = "Success" ]; then
       echo "  $email: verified"
       return 0
