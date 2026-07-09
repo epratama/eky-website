@@ -13,7 +13,7 @@ export default function ExperienceCard({ role }) {
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
       }`}
     >
-      <div className="absolute left-0 top-1 w-4 h-4 border-[3px] border-brutal-accent bg-brutal-accent rounded-full -translate-x-[calc(50%+1.5px)]" />
+      <div className="absolute left-0 top-1/2 w-4 h-4 border-[3px] border-brutal-accent bg-brutal-accent rounded-full -translate-x-[calc(50%+1.5px)] -translate-y-1/2" />
 
       <div className="border-[3px] border-brutal-primary bg-white shadow-brutal p-5 md:p-7 mb-10 hover:shadow-brutal-lg transition-shadow duration-200">
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-2">
