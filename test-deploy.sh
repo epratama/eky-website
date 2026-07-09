@@ -55,7 +55,16 @@ case "$2" in
   verify-email-identity)
     echo ""
     ;;
-  *) exit 0 ;;
+  verify-domain-identity|verify-domain-dkim)
+    echo ""
+    ;;
+  get-identity-dkim-attributes|get-identity-mail-from-domain-attributes)
+    echo "Success"
+    ;;
+  set-identity-mail-from-domain)
+    echo ""
+    ;;
+  *) exit 0 ;; 
 esac
 MOCK
   chmod +x "$MOCK_DIR/aws"

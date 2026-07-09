@@ -95,6 +95,110 @@ if [ "$RECIPIENT_EMAIL" != "$SENDER_EMAIL" ]; then
   verify_ses_email "$RECIPIENT_EMAIL" || { echo "Recipient email not verified. Aborting."; exit 1; }
 fi
 
+# ====== SES domain setup (SPF, DKIM, DMARC, MAIL FROM) ======
+setup_ses_domain() {
+  local domain="$1"
+  local zone_id="$2"
+  echo ""
+  echo "=== Setting up SES for $domain ==="
+
+  # 1. Verify domain in SES
+  local ses_status
+  ses_status=$(aws ses get-identity-verification-attributes --identities "$domain" \
+    --query "VerificationAttributes.\"$domain\".VerificationStatus" --output text 2>/dev/null)
+  if [ "$ses_status" != "Success" ]; then
+    local token
+    token=$(aws ses verify-domain-identity --domain "$domain" --query 'VerificationToken' --output text 2>/dev/null)
+    if [ -n "$token" ]; then
+      echo "  Adding SES domain verification..."
+      aws route53 change-resource-record-sets --hosted-zone-id "$zone_id" \
+        --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"_amazonses.$domain\",\"Type\":\"TXT\",\"TTL\":300,\"ResourceRecords\":[{\"Value\":\"\\\"$token\\\"\"}]}}]}" \
+        --output text --no-cli-pager 2>/dev/null
+    fi
+  else
+    echo "  Domain $domain already verified in SES"
+  fi
+
+  # 2. SPF record (merge with existing)
+  local existing_spf
+  existing_spf=$(aws route53 list-resource-record-sets --hosted-zone-id "$zone_id" \
+    --query "ResourceRecordSets[?Name=='$domain.' && Type=='TXT'].ResourceRecords[*].Value" --output text 2>/dev/null)
+  local has_spf has_google has_ses
+  echo "$existing_spf" | grep -q "v=spf1" && has_spf=true || has_spf=false
+  echo "$existing_spf" | grep -q "_spf.google.com" && has_google=true || has_google=false
+  echo "$existing_spf" | grep -q "amazonses.com" && has_ses=true || has_ses=false
+
+  if ! $has_ses; then
+    local spf_parts=""
+    $has_google && spf_parts=" include:_spf.google.com" || true
+    spf_parts="$spf_parts include:amazonses.com"
+    local spf_value="\"v=spf1$spf_parts ~all\""
+    echo "  Adding SPF: $spf_value"
+
+    # Build TXT record preserving existing non-SPF records
+    local other_txt
+    other_txt=$(echo "$existing_spf" | grep -v "v=spf1" | sed 's/.*/"&"/' | tr '\n' ',' | sed 's/,$//')
+    local records_json="[{\"Value\":$spf_value}"
+    [ -n "$other_txt" ] && records_json+=", {\"Value\":$other_txt}"
+    records_json+="]"
+
+    aws route53 change-resource-record-sets --hosted-zone-id "$zone_id" \
+      --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"$domain\",\"Type\":\"TXT\",\"TTL\":300,\"ResourceRecords\":$records_json}}]}" \
+      --output text --no-cli-pager 2>/dev/null
+  else
+    echo "  SPF already includes amazonses.com"
+  fi
+
+  # 3. DKIM
+  local dkim_status
+  dkim_status=$(aws ses get-identity-dkim-attributes --identities "$domain" \
+    --query "DkimAttributes.\"$domain\".DkimVerificationStatus" --output text 2>/dev/null)
+  if [ "$dkim_status" != "Success" ]; then
+    local tokens
+    tokens=$(aws ses verify-domain-dkim --domain "$domain" --query 'DkimTokens' --output text 2>/dev/null)
+    if [ -n "$tokens" ]; then
+      echo "  Adding DKIM records..."
+      for token in $tokens; do
+        aws route53 change-resource-record-sets --hosted-zone-id "$zone_id" \
+          --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"${token}._domainkey.$domain\",\"Type\":\"CNAME\",\"TTL\":300,\"ResourceRecords\":[{\"Value\":\"${token}.dkim.amazonses.com\"}]}}]}" \
+          --output text --no-cli-pager 2>/dev/null
+      done
+    fi
+  else
+    echo "  DKIM already enabled for $domain"
+  fi
+
+  # 4. MAIL FROM domain
+  local mail_from_status
+  mail_from_status=$(aws ses get-identity-mail-from-domain-attributes --identities "$domain" \
+    --query "MailFromDomainAttributes.\"$domain\".MailFromDomainStatus" --output text 2>/dev/null)
+  if [ "$mail_from_status" != "Success" ]; then
+    aws ses set-identity-mail-from-domain --identity "$domain" \
+      --mail-from-domain "mail.$domain" --behavior-on-mx-failure UseDefaultValue 2>/dev/null
+    echo "  Adding MAIL FROM DNS records..."
+    aws route53 change-resource-record-sets --hosted-zone-id "$zone_id" \
+      --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"mail.$domain\",\"Type\":\"MX\",\"TTL\":300,\"ResourceRecords\":[{\"Value\":\"10 feedback-smtp.ap-southeast-2.amazonses.com\"}]}},{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"mail.$domain\",\"Type\":\"TXT\",\"TTL\":300,\"ResourceRecords\":[{\"Value\":\"\\\"v=spf1 include:amazonses.com ~all\\\"\"}]}}]}" \
+      --output text --no-cli-pager 2>/dev/null
+  else
+    echo "  MAIL FROM already configured for $domain"
+  fi
+
+  # 5. DMARC
+  local existing_dmarc
+  existing_dmarc=$(aws route53 list-resource-record-sets --hosted-zone-id "$zone_id" \
+    --query "ResourceRecordSets[?Name=='_dmarc.$domain.'].ResourceRecords[0].Value" --output text 2>/dev/null)
+  if [ -z "$existing_dmarc" ] || [ "$existing_dmarc" = "None" ]; then
+    echo "  Adding DMARC record..."
+    aws route53 change-resource-record-sets --hosted-zone-id "$zone_id" \
+      --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"_dmarc.$domain\",\"Type\":\"TXT\",\"TTL\":300,\"ResourceRecords\":[{\"Value\":\"\\\"v=DMARC1; p=none; rua=mailto:$RECIPIENT_EMAIL\\\"\"}]}}]}" \
+      --output text --no-cli-pager 2>/dev/null
+  else
+    echo "  DMARC already configured"
+  fi
+
+  echo "  SES domain setup complete for $domain"
+}
+
 # ====== Custom domain + cert ======
 find_cert_for_domain() {
   local domain="$1"
@@ -281,6 +385,12 @@ if [ -n "$DOMAIN" ]; then
     --output text 2>/dev/null | sed 's|/hostedzone/||')
   if [ -n "$ZONE_ID" ] && [ "$ZONE_ID" != "None" ]; then
     echo "Route53 zone found: $ZONE_ID"
+
+    # Set up SES domain (SPF, DKIM, DMARC, MAIL FROM) for sender domain
+    SENDER_DOMAIN=$(echo "$SENDER_EMAIL" | cut -d'@' -f2)
+    if [ -n "$SENDER_DOMAIN" ] && [ "$SENDER_DOMAIN" != "gmail.com" ] && [ "$SENDER_DOMAIN" != "yahoo.com" ] && [ "$SENDER_DOMAIN" != "outlook.com" ]; then
+      setup_ses_domain "$SENDER_DOMAIN" "$ZONE_ID"
+    fi
 
     EXISTING_ROOT=$(aws route53 list-resource-record-sets \
       --hosted-zone-id "$ZONE_ID" \
