@@ -67,7 +67,13 @@ mock-testable components and infrastructure-as-code:
   Route53 records, cert)
 - **30 shell unit tests** using mocked AWS CLI verify every code path
 
-### Architectural Governance
+### Agent Architecture
+
+Every interaction with OpenCode follows a **reAct (Reasoning + Acting)** loop: observe (read files, run commands) → reason (analyze, decide next step) → act (edit code, run checks). This cycle repeats continuously — every bug fix, test run, and deploy is a reAct turn.
+
+For larger work, **hierarchical delegation** layers on top: the main agent decomposes a plan into independent tasks and dispatches **sub-agents**, each running their own reAct loop in parallel with their own context and tools. Sub-agents report back; the main agent integrates results, runs verification, and advances the plan. The 20-task implementation was executed this way via `subagent-driven-development`.
+
+### Service Topology
 
 Designed secure connections between AWS services:
 
@@ -77,9 +83,18 @@ Designed secure connections between AWS services:
 - Lambda → SES: custom domain sender with full SPF/DKIM/DMARC alignment
 - SES domain verification, MAIL FROM MX, DKIM CNAMEs — all automated in deploy script
 
+### Architectural Governance
+
+Structured how the AI agent authenticates to and provisions customer cloud infrastructure:
+
+- **AWS CLI as the control plane**: All infrastructure operations executed through authenticated AWS CLI commands via OpenCode's shell tool — no intermediate UI, direct API access.
+- **OAuth-based authentication**: IAM user credentials or SSO tokens managed through `aws configure` / `aws sso login`. The agent never stores or handles secrets — they live in the host machine's credential chain.
+- **CloudFormation as the deployment contract**: Infrastructure defined declaratively in templates; the agent invokes `cloudformation deploy` as a single atomic operation rather than orchestrating individual create/update calls.
+- **`deploy.sh` as the automation boundary**: All multi-step workflows (SES setup, cert detection, DNS config) encapsulated in a versioned, mock-testable shell script — the agent invokes the script rather than composing raw CLI calls.
+
 ### Product Feedback Loop
 
-Identified technical friction points and built automated guardrails into `deploy.sh`:
+Identified technical friction points during development and built automated guardrails into `deploy.sh`, closing the loop in-project rather than filing external feature requests:
 
 | Friction | Resolution |
 |---|---|
