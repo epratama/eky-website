@@ -1,6 +1,6 @@
-import { Linkedin, ArrowUp } from 'lucide-react'
+import { Linkedin, Github, ArrowUp } from 'lucide-react'
 
-export default function Footer({ name, role, linkedin }) {
+export default function Footer({ name, role, linkedin, github }) {
   return (
     <footer className="border-t-[3px] border-brutal-primary bg-brutal-primary text-brutal-bg py-10 px-6">
       <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -18,6 +18,15 @@ export default function Footer({ name, role, linkedin }) {
               aria-label="LinkedIn"
             >
               <Linkedin size={20} />
+            </a>
+            <a
+              href={github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brutal-bg hover:text-brutal-accent transition-colors duration-150 cursor-pointer"
+              aria-label="GitHub"
+            >
+              <Github size={20} />
             </a>
           </div>
         </div>

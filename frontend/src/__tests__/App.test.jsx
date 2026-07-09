@@ -34,9 +34,12 @@ describe('App', () => {
     expect(swiftPos).toBeLessThan(internetrixPos)
   })
 
-  it('renders GitHub link', () => {
+  it('renders GitHub links in Hero and Footer', () => {
     render(<App />)
-    const gh = screen.getByRole('link', { name: /github/i })
-    expect(gh).toHaveAttribute('href', 'https://github.com/epratama')
+    const links = screen.getAllByRole('link', { name: /github/i })
+    expect(links).toHaveLength(2)
+    links.forEach((link) => {
+      expect(link).toHaveAttribute('href', 'https://github.com/epratama')
+    })
   })
 })
