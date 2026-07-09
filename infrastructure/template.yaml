@@ -2,6 +2,14 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: Resume website — S3 + CloudFront hosting with Lambda contact form
 
 Parameters:
+  DomainName:
+    Type: String
+    Default: ""
+    Description: Custom domain name (leave empty to use CloudFront URL only)
+  CertificateArn:
+    Type: String
+    Default: ""
+    Description: ACM certificate ARN in us-east-1 for the custom domain
   HCaptchaSecret:
     Type: String
     NoEcho: true
@@ -15,6 +23,9 @@ Parameters:
   SenderEmail:
     Type: String
     Description: SES verified email address for sending
+
+Conditions:
+  HasCustomDomain: !Not [!Equals [!Ref DomainName, ""]]
 
 Resources:
   WebsiteBucket:
@@ -124,6 +135,12 @@ Resources:
           - ErrorCode: 404
             ResponseCode: 200
             ResponsePagePath: /index.html
+        Aliases: !If [HasCustomDomain, [!Ref DomainName], !Ref "AWS::NoValue"]
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref CertificateArn
+            SslSupportMethod: sni-only
+          - CloudFrontDefaultCertificate: true
         DefaultCacheBehavior:
           TargetOriginId: S3Origin
           ViewerProtocolPolicy: redirect-to-https
