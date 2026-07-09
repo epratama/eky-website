@@ -224,20 +224,6 @@ Resources:
           def _esc(s):
               return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
-  ContactFormFunctionUrl:
-    Type: AWS::Lambda::Url
-    Properties:
-      TargetFunctionArn: !Ref ContactFormFunction
-      AuthType: NONE
-      Cors:
-        AllowOrigins:
-          - "*"
-        AllowMethods:
-          - POST
-          - OPTIONS
-        AllowHeaders:
-          - Content-Type
-
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
