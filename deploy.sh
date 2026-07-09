@@ -64,7 +64,27 @@ else
   read -p "Domain name: " DOMAIN_NAME
   if [ -n "$DOMAIN_NAME" ]; then
     read -p "Certificate ARN (us-east-1): " CERT_ARN
-  fi
+    if [ -z "$CERT_ARN" ]; then
+      echo ""
+      echo "No certificate ARN provided. Request one first:"
+      echo ""
+      echo "  ACM_ARN=\$(aws acm request-certificate \\"
+      echo "    --domain-name $DOMAIN_NAME \\"
+      echo "    --subject-alternative-names www.$DOMAIN_NAME \\"
+      echo "    --validation-method DNS \\"
+      echo "    --region us-east-1 \\"
+      echo "    --query 'CertificateArn' --output text)"
+      echo ""
+      echo "  # Get DNS validation record:"
+      echo "  aws acm describe-certificate \\"
+      echo "    --certificate-arn \"\$ACM_ARN\" \\"
+      echo "    --query 'Certificate.DomainValidationOptions[0].ResourceRecord' \\"
+      echo "    --region us-east-1"
+      echo ""
+      echo "Add the CNAME at your DNS provider, wait for validation, then re-run with the ARN."
+      echo ""
+      exit 1
+    fi
 fi
 
 # Build parameter overrides
