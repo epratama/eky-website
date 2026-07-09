@@ -3,7 +3,7 @@
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
 command builds, tests, provisions infrastructure, uploads, and configures DNS.
 55 tests across 4 suites. 14 AWS resources managed via CloudFormation.
-Developed entirely with **OpenCode** (AI coding agent) using **Superpowers** skills.
+ Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills Used](#superpowers-skills-used)).
 
 ---
 
