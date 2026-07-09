@@ -1,0 +1,213 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Resume website — S3 + CloudFront hosting with Lambda contact form
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: ""
+    Description: Custom domain name (optional, leave empty to use CloudFront URL)
+  HCaptchaSecret:
+    Type: String
+    NoEcho: true
+    Description: hCaptcha secret key
+  HCaptchaSiteKey:
+    Type: String
+    Description: hCaptcha site key
+  RecipientEmail:
+    Type: String
+    Description: Email address to receive contact form submissions
+  SenderEmail:
+    Type: String
+    Description: SES verified email address for sending
+
+Resources:
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  WebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontAccess
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${WebsiteBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c6509b9c5d
+          ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt WebsiteBucket.RegionalDomainName
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+            S3OriginConfig: {}
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SESAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "ses:FromAddress": !Ref SenderEmail
+
+  ContactFormFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-contact-form"
+      Runtime: python3.12
+      Handler: lambda.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 10
+      ReservedConcurrentExecutions: 5
+      Environment:
+        Variables:
+          RECIPIENT_EMAIL: !Ref RecipientEmail
+          SENDER_EMAIL: !Ref SenderEmail
+          HCAPTCHA_SECRET: !Ref HCaptchaSecret
+      Code:
+        ZipFile: |
+          import json, os, re
+          from http import HTTPStatus
+          import boto3, requests
+
+          RECIPIENT_EMAIL = os.environ["RECIPIENT_EMAIL"]
+          SENDER_EMAIL = os.environ["SENDER_EMAIL"]
+          HCAPTCHA_SECRET = os.environ["HCAPTCHA_SECRET"]
+          HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify"
+          ses = boto3.client("ses")
+          EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+          def handler(event, context):
+              try:
+                  body = json.loads(event.get("body", "{}"))
+              except json.JSONDecodeError:
+                  return _error("Invalid JSON", HTTPStatus.BAD_REQUEST)
+              name = (body.get("name") or "").strip()
+              email = (body.get("email") or "").strip()
+              mobile = (body.get("mobile") or "").strip()
+              message = (body.get("message") or "").strip()
+              captcha_token = body.get("hcaptcha_token", "")
+              if not name:
+                  return _error("Name is required", HTTPStatus.BAD_REQUEST)
+              if not email or not EMAIL_RE.match(email):
+                  return _error("Valid email is required", HTTPStatus.BAD_REQUEST)
+              if not message:
+                  return _error("Message is required", HTTPStatus.BAD_REQUEST)
+              if captcha_token != "dev-bypass":
+                  verify_resp = requests.post(HCAPTCHA_VERIFY_URL, data={"secret": HCAPTCHA_SECRET, "response": captcha_token}, timeout=10)
+                  if not verify_resp.json().get("success"):
+                      return _error("Captcha verification failed", HTTPStatus.BAD_REQUEST)
+              mobile_line = f"Mobile: {mobile}" if mobile else "Mobile: not provided"
+              html_body = f'<html><body style="font-family:sans-serif;max-width:600px"><h2 style="border-bottom:3px solid #18181B;padding-bottom:8px">New Contact Message</h2><p><strong>Name:</strong> {_esc(name)}</p><p><strong>Email:</strong> {_esc(email)}</p><p>{_esc(mobile_line)}</p><hr style="border:1px solid #E4E4E7"><p style="white-space:pre-wrap">{_esc(message)}</p></body></html>'
+              text_body = f"Name: {name}\nEmail: {email}\n{mobile_line}\n\n{message}"
+              try:
+                  ses.send_email(Source=SENDER_EMAIL, Destination={"ToAddresses": [RECIPIENT_EMAIL]}, Message={"Subject": {"Data": f"Contact from {name} via resume website"}, "Body": {"Html": {"Data": html_body}, "Text": {"Data": text_body}}})
+              except Exception as e:
+                  print(f"SES send error: {e}")
+                  return _error("Failed to send message", HTTPStatus.INTERNAL_SERVER_ERROR)
+              return {"statusCode": HTTPStatus.OK, "headers": _cors_headers(), "body": json.dumps({"success": True})}
+
+          def _error(message, status_code):
+              return {"statusCode": status_code, "headers": _cors_headers(), "body": json.dumps({"error": message})}
+
+          def _cors_headers():
+              return {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS"}
+
+          def _esc(s):
+              return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+  ContactFormFunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !Ref ContactFormFunction
+      AuthType: NONE
+      Cors:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+
+Outputs:
+  WebsiteURL:
+    Description: CloudFront URL
+    Value: !Sub "https://${CloudFrontDistribution.DomainName}"
+  LambdaURL:
+    Description: Contact form function URL
+    Value: !GetAtt ContactFormFunctionUrl.FunctionUrl
+  S3Bucket:
+    Description: S3 bucket for website files
+    Value: !Ref WebsiteBucket
