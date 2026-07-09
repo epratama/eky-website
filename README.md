@@ -10,8 +10,8 @@ Developed entirely with **OpenCode** (AI coding agent) using **Superpowers** ski
 ## Architecture
 
 ```
-                 Route53 ────────────────────────────┐
-                 (yourdomain.com, www)               │
+                  Route53                            ┐
+               (yourdomain.com)                      │
                     │ ALIAS A                        │
                     ▼                                │
      ┌──────────────────────────────┐  ACM cert      │
@@ -23,14 +23,15 @@ Developed entirely with **OpenCode** (AI coding agent) using **Superpowers** ski
      │     S3 (static site)     │
      └──────────────────────────┘
 
-     ┌──────────┐    ┌───────────────┐    ┌──────────────┐    ┌─────┐
-     │ hCaptcha │───▶│  API Gateway  │───▶│    Lambda    │───▶│ SES │
-     │ invisible│    │   HTTP API    │    │  Python 3.12 │    │     │
-     └──────────┘    └───────────────┘    │              │    └──┬──┘
-                                          │  Origin ✓    │       │
-                                          │  Rate 3/m   │       │
-                                          │  CORS        │  SPF + DKIM
-                                          └──────────────┘  + DMARC
+     ┌──────────┐    ┌───────────────┐    ┌──────────────┐   ┌─────┐
+     │ hCaptcha │───▶│  API Gateway  │───▶│    Lambda    │──▶│ SES │
+     │ invisible│    │   HTTP API    │    │  Python 3.12 │   │     │
+     └──────────┘    └───────────────┘    │  Origin ✓    │   └──┬──┘
+                                          │  Rate 3/min  │      │
+                                          │  CORS        │      │
+                                          └──────────────┘      │
+                                                         SPF+DKIM
+                                                          +DMARC
                                                              ▼
                                                          📧 inbox
 ```
