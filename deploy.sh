@@ -85,6 +85,7 @@ else
       echo ""
       exit 1
     fi
+  fi
 fi
 
 # Build parameter overrides
