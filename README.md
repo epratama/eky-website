@@ -10,12 +10,12 @@ Developed entirely with **OpenCode** (AI coding agent) using **Superpowers** ski
 ## Architecture
 
 ```
-                  Route53                            ┐
-               (yourdomain.com)                      │
-                    │ ALIAS A                        │
-                    ▼                                │
-     ┌──────────────────────────────┐  ACM cert      │
-     │  CloudFront (HTTPS, HTTP/3)  │◄─us-east-1─────┘
+                  Route53
+               (yourdomain.com)
+                    │ ALIAS A
+                    ▼
+     ┌──────────────────────────────┐
+     │  CloudFront (HTTPS, HTTP/3)  │◄── ACM cert (us-east-1)
      └──────────────┬───────────────┘
                     │ OAC
                     ▼
