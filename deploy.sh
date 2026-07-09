@@ -27,10 +27,13 @@ if aws cloudformation describe-stacks --stack-name "$STACK_NAME" > /dev/null 2>&
   EXISTING_SENDER=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="SenderEmail") | .ParameterValue' 2>/dev/null)
   EXISTING_RECIPIENT=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="RecipientEmail") | .ParameterValue' 2>/dev/null)
   EXISTING_SITEKEY=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="HCaptchaSiteKey") | .ParameterValue' 2>/dev/null)
+  EXISTING_DOMAIN=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="DomainName") | .ParameterValue' 2>/dev/null)
+  EXISTING_CERT=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="CertificateArn") | .ParameterValue' 2>/dev/null)
   echo "Stack '$STACK_NAME' exists. Current config:"
   echo "  Sender:     $EXISTING_SENDER"
   echo "  Recipient:  $EXISTING_RECIPIENT"
   echo "  SiteKey:    $EXISTING_SITEKEY"
+  [ -n "$EXISTING_DOMAIN" ] && echo "  Domain:     $EXISTING_DOMAIN"
   echo "  SiteKey now: $HCAPTCHA_SITEKEY"
 else
   echo "Stack '$STACK_NAME' does not exist — will create."
@@ -50,6 +53,20 @@ fi
 read -s -p "hCaptcha secret (leave empty to keep existing): " HCAPTCHA_SECRET
 echo ""
 
+# Custom domain (optional)
+if [ "$STACK_EXISTS" = true ] && [ -n "$EXISTING_DOMAIN" ]; then
+  read -p "Custom domain [$EXISTING_DOMAIN]: " DOMAIN_NAME
+  DOMAIN_NAME="${DOMAIN_NAME:-$EXISTING_DOMAIN}"
+  read -p "Certificate ARN [$EXISTING_CERT]: " CERT_ARN
+  CERT_ARN="${CERT_ARN:-$EXISTING_CERT}"
+else
+  echo "Custom domain (optional — leave empty to skip):"
+  read -p "Domain name: " DOMAIN_NAME
+  if [ -n "$DOMAIN_NAME" ]; then
+    read -p "Certificate ARN (us-east-1): " CERT_ARN
+  fi
+fi
+
 # Build parameter overrides
 PARAMS=()
 PARAMS+=(ParameterKey=HCaptchaSiteKey,ParameterValue="$HCAPTCHA_SITEKEY")
@@ -57,6 +74,10 @@ PARAMS+=(ParameterKey=SenderEmail,ParameterValue="$SENDER_EMAIL")
 PARAMS+=(ParameterKey=RecipientEmail,ParameterValue="$RECIPIENT_EMAIL")
 if [ -n "$HCAPTCHA_SECRET" ]; then
   PARAMS+=(ParameterKey=HCaptchaSecret,ParameterValue="$HCAPTCHA_SECRET")
+fi
+if [ -n "$DOMAIN_NAME" ]; then
+  PARAMS+=(ParameterKey=DomainName,ParameterValue="$DOMAIN_NAME")
+  PARAMS+=(ParameterKey=CertificateArn,ParameterValue="$CERT_ARN")
 fi
 
 # Deploy/update stack
@@ -74,6 +95,7 @@ S3_BUCKET=$(echo "$DATA" | jq -r '.Stacks[0].Outputs[] | select(.OutputKey=="S3B
 LAMBDA_URL=$(echo "$DATA" | jq -r '.Stacks[0].Outputs[] | select(.OutputKey=="LambdaURL") | .OutputValue')
 DIST_ID=$(echo "$DATA" | jq -r '.Stacks[0].Outputs[] | select(.OutputKey=="CloudFrontDistributionId") | .OutputValue')
 DIST_DOMAIN=$(echo "$DATA" | jq -r '.Stacks[0].Outputs[] | select(.OutputKey=="WebsiteURL") | .OutputValue' | cut -d'/' -f3)
+DOMAIN=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="DomainName") | .ParameterValue' 2>/dev/null)
 
 echo ""
 echo "Stack:    $STACK_NAME"
@@ -97,4 +119,8 @@ echo "=== Invalidating CloudFront: $DIST_ID ==="
 aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*" --output text
 
 echo ""
-echo "=== Done: https://$DIST_DOMAIN ==="
+if [ -n "$DOMAIN" ]; then
+  echo "=== Done: https://$DOMAIN ==="
+else
+  echo "=== Done: https://$DIST_DOMAIN ==="
+fi
