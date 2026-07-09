@@ -193,7 +193,7 @@ Resources:
     Properties:
       FunctionName: !Sub "${AWS::StackName}-contact-form"
       Runtime: python3.12
-      Handler: lambda.handler
+      Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 10
       ReservedConcurrentExecutions: 5
@@ -207,6 +207,7 @@ Resources:
           import json, os, re
           from http import HTTPStatus
           import urllib.request
+          import urllib.parse
           import boto3
 
           RECIPIENT_EMAIL = os.environ["RECIPIENT_EMAIL"]
