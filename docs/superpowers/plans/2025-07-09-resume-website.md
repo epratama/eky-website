@@ -3,11 +3,47 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > **Note (post-deployment):** This was the original implementation plan. During development, deployment realities led to adjustments:
+> 
+> ### Architecture changes
 > - `AWS::Lambda::Url` → **API Gateway HTTP API** (blocked by org CloudFormation hooks)
 > - `build.sh` → **`deploy.sh`** (merged build + deploy into a single pipeline)
 > - CloudFront managed policy IDs → **inline CachePolicy/OriginRequestPolicy/ResponseHeadersPolicy** resources (policy IDs differ by region)
 > - Added SES domain setup, SPF/DKIM/DMARC automation, and Route53 ALIAS auto-configuration
-> - See [Product Feedback Loop](../README.md#product-feedback-loop) for the full list
+> 
+> ### Backend divergences (Task 16, 17)
+> - `import requests` → `urllib.request` (stdlib, no extra dep) — removed `requests` from `requirements.txt`
+> - Added `_rate_limit()` (3 req/min/IP sliding window) + `_check_origin()` (rejects unknown domains)
+> - Added `ALLOWED_ORIGIN` and `DOMAIN_NAME` env vars (5 total vs planned 3)
+> - `_esc()` escapes 5 chars not 4 (added single-quote → `&#x27;`)
+> - `from_addr` format: `"Eky Pratama Portfolio <{SENDER_EMAIL}>"` (display name added)
+> - Email subject: `"Portfolio contact from {name} via {subject_domain}"`
+> - HTML/text body includes `"Sent via contact form at {domain}"` footer
+> - Template: 5 API Gateway resources (HttpApi + Integration + Route + Stage + Permission) not 1
+> - Template: `Handler: index.handler` (ZipFile inline code is named `index.py`)
+> - Template: `BlockPublicPolicy: false` (needed for OAC bucket policy)
+> - Template: Added `CertificateArn`, `DomainName`, `HasCustomDomain` condition, security headers
+> 
+> ### Frontend component divergences (Tasks 1-15)
+> - `Navbar`: section `hero` → `home`, added `aria-controls` and `id="mobile-menu"` for a11y
+> - `Hero`: added GitHub button (plan had LinkedIn only), `min-h-[90vh]` responsive classes, `DecorativeShapes` dropped variant prop
+> - `Footer`: added `role` + `github` props, GitHub icon link (plan had LinkedIn only)
+> - `DecorativeShapes`: removed `variant` prop — always renders hero SVG
+> - `ExperienceCard`: timeline dot centered on border via `-translate-x-[calc(50%+1.5px)] -translate-y-1/2`, null-safe `role.highlights?.length`, `cursor-pointer` removed
+> - `SkillGroup`: removed `cursor-pointer`, `transition-shadow` → `transition-all`
+> - `ContactForm`: uses `formRef = useRef(form); formRef.current = form` pattern to avoid stale closure
+> - `App`: `<Footer>` passes `role={resume.title}` and `github={resume.github}`
+> - `useScrollReveal`: hardcoded threshold/rootMargin instead of destructured defaults, `useEffect` depends on `[]`
+> 
+> ### Data divergences (Task 2)
+> - `resume.json`: added `github` field, `title` → `"Technical Lead & Senior Software Engineer"`, summary updated
+> - `index.html`: title/description updated to "Technical Lead & Senior Software Engineer", inline SVG favicon added
+> - `package.json`: added `vitest`, `jsdom`, `@testing-library/*` devDeps + `"test": "vitest run"` script
+> 
+> ### Testing (not in original plan)
+> - Added 12 Vitest frontend tests (App, ContactForm, useScrollReveal)
+> - Added 13 pytest Lambda tests (origin, rate limit, CORS, validation, escaping)
+> - Added 13 Bash deploy tests + 17 CF template validation tests
+> - See [Product Feedback Loop](../README.md#product-feedback-loop) for friction-driven changes
 
 **Goal:** Build a single-page neo-brutalist resume website for Eky Pratama with a React frontend hosted on S3/CloudFront and a Python Lambda contact form backend, all deployed via CloudFormation.
 
