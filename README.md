@@ -2,7 +2,7 @@
 
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
 command builds, provisions infrastructure, uploads, and configures DNS.
-73 tests across 4 suites. 14 AWS resources managed via CloudFormation.
+74 tests across 4 suites. 14 AWS resources managed via CloudFormation.
  Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills & Tools Used](#skills--tools-used)).
 
 ---
@@ -157,7 +157,7 @@ Each phase maps to a Superpowers or community skill:
 | **Hosting** | S3 + CloudFront (HTTPS, HTTP/3, HTTP/2, compression) |
 | **DNS** | Route53 (ALIAS A, SPF TXT, DKIM CNAMEs, DMARC TXT, SES verification TXT, MAIL FROM MX) |
 | **IaC** | CloudFormation (14 resources, 6 parameters) |
-| **Testing** | Vitest + testing-library (16), pytest (29), bash mocks (30) |
+| **Testing** | Vitest + testing-library (15), pytest (29), bash mocks (30) |
 | **Design** | Neo-brutalism (ui-ux-pro-max design system) |
 | **Analytics** | Google Analytics 4 (GTM gtag.js, injected via `VITE_GTM_ID` at build time) |
 | **CI/CD** | `deploy.sh` — 1 command: build → deploy → invalidate |
@@ -178,7 +178,7 @@ Each phase maps to a Superpowers or community skill:
 | **Skill invocation** | `codeql-security-scan` | Community | Multi-language static analysis — 157 queries, 0 automated findings, 3 manual fixes ([report](security-report/codeql/2025-07-09-security-audit.md)) |
 | **Skill invocation** | `checkov-iac-scan` | Community | CloudFormation IaC audit — 22 passed, 0 critical/high, 10 informational ([report](security-report/checkov/summary-report.md)) |
 | **Bug diagnosis** | `systematic-debugging` | Superpowers | Debugged Lambda::Url block, DMARC alignment, JMESPath syntax, CF policy IDs, CSP hCaptcha blocking, template indentation crashes |
-| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 73 tests + lint before every completion claim |
+| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 74 tests + lint before every completion claim |
 | **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
 | **Code review response** | `receiving-code-review` | Superpowers | Security audit feedback: dev-bypass gating, CSP hardening, error message sanitization |
 | **Browser testing** | `Playwright MCP` | OpenCode | Automated end-to-end browser testing of contact form and CSP |
@@ -190,11 +190,11 @@ Each phase maps to a Superpowers or community skill:
 
 | Suite | Language | Tests | Command |
 |---|---|---|---|
-| **Frontend components** | JSX (Vitest) | 16 | `cd frontend && npm test` |
+| **Frontend components** | JSX (Vitest) | 15 | `cd frontend && npm test` |
 | **Lambda backend** | Python (pytest) | 29 | `cd backend && .venv/bin/pytest` |
 | **Deploy script** | Bash (mocks) | 13 | `./test-deploy.sh` |
 | **CF template** | Bash (validation) | 17 | `./test-template.sh` |
-| **Total** | | **73** | |
+| **Total** | | **74** | |
 
 ### What the tests cover
 

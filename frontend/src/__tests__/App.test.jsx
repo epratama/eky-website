@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
 import { resolve } from 'path'
 import App from '../components/App'
 
@@ -70,5 +71,17 @@ describe('App', () => {
     expect(csp).toContain('google-analytics.com')
     expect(csp).toContain("frame-src")
     expect(csp).toContain("form-action 'self'")
+  })
+
+  it('includes GTM script in build when VITE_GTM_ID is set', () => {
+    const tmpDir = resolve(__dirname, '../../dist-gtm-test')
+    execSync(`VITE_GTM_ID=G-TEST123 npx vite build --outDir ${tmpDir}`, {
+      cwd: resolve(__dirname, '../..'),
+      stdio: 'pipe',
+      env: { ...process.env, VITE_GTM_ID: 'G-TEST123' },
+    })
+    const html = readFileSync(resolve(tmpDir, 'index.html'), 'utf-8')
+    expect(html).toContain('googletagmanager.com/gtag/js?id=G-TEST123')
+    execSync(`rm -rf ${tmpDir}`)
   })
 })
