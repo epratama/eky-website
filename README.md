@@ -106,6 +106,34 @@ Identified technical friction points during development and built automated guar
 
 ---
 
+## Development Lifecycle
+
+```
+  ┌──────────────┐   ┌─────────────┐   ┌──────────────┐   ┌──────────────┐
+  │ brainstorming │──▶│ writing-plans│──▶│ TDD: tests   │──▶│ subagent-    │
+  │  design spec  │   │ 20-task plan │   │ written FIRST │   │ driven dev   │
+  └──────────────┘   └─────────────┘   └──────────────┘   └──────┬───────┘
+                                                                  │
+                                                                  ▼
+  ┌──────────────┐   ┌─────────────┐   ┌──────────────┐   ┌──────────────┐
+  │ codeql-      │◀──│ verification │◀──│ systematic-  │◀──│ deploy.sh    │
+  │ security-scan│   │-before-done │   │ debugging    │   │ 1-command CI │
+  └──────┬───────┘   └─────────────┘   └──────────────┘   └──────────────┘
+         │
+         ▼
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │                  LOOP: fix → TDD → review → audit → repeat          │
+  └──────────────────────────────────────────────────────────────────────┘
+```
+
+Each phase has a corresponding skill invoked at the right time:
+**brainstorming** (design) → **writing-plans** (breakdown) → **TDD** (write tests first) →
+**subagent-driven-development** (parallel execution) → **systematic-debugging** (diagnose failures) →
+**verification-before-completion** (quality gate) → **codeql-security-scan** (audit findings) →
+loop until zero issues.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -133,9 +161,11 @@ Identified technical friction points during development and built automated guar
 | **Skill invocation** | `ui-ux-pro-max` | Community | Neo-brutalist design system (styles, palettes, fonts, spacing) |
 | **Skill invocation** | `ponytail` | Community | Over-engineering audits: cut dead code, removed unused dependencies |
 | **Skill invocation** | `test-driven-development` | Superpowers | RED-GREEN-REFACTOR cycle: tests written before implementation |
-| **Bug diagnosis** | `systematic-debugging` | Superpowers | Debugged Lambda::Url org policy block, DMARC alignment, JMESPath `@` syntax, CF policy ID region mismatch |
-| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 55 tests + lint before every completion claim |
+| **Skill invocation** | `codeql-security-scan` | Community | Multi-language static analysis — 157 queries, 0 automated findings, 3 manual fixes |
+| **Bug diagnosis** | `systematic-debugging` | Superpowers | Debugged Lambda::Url block, DMARC alignment, JMESPath syntax, CF policy IDs, CSP hCaptcha blocking, template indentation crashes |
+| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 69 tests + lint before every completion claim |
 | **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
+| **Code review response** | `receiving-code-review` | Superpowers | Security audit feedback: dev-bypass gating, CSP hardening, error message sanitization |
 | **Process artifacts** | `docs/superpowers/specs/` + `docs/superpowers/plans/` | — | Full lifecycle from design spec to implementation plan — see [Development Artifacts](#development-artifacts) |
 
 ---
