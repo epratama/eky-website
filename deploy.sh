@@ -54,6 +54,8 @@ else
 fi
 read -s -p "hCaptcha secret (leave empty to keep existing): " HCAPTCHA_SECRET
 echo ""
+read -p "Google Analytics ID ($GTM_ID, leave empty to skip): " GTM_INPUT
+GTM_ID="${GTM_INPUT:-$GTM_ID}"
 
 # ====== SES email verification ======
 verify_ses_email() {
