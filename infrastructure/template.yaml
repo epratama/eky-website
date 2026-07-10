@@ -201,7 +201,7 @@ Resources:
           RECIPIENT_EMAIL: !Ref RecipientEmail
           SENDER_EMAIL: !Ref SenderEmail
           HCAPTCHA_SECRET: !Ref HCaptchaSecret
-          ALLOWED_ORIGIN: !Sub "https://${DomainName}"
+          ALLOWED_ORIGIN: !If [HasCustomDomain, !Sub "https://${DomainName}", ""]
           DOMAIN_NAME: !Ref DomainName
           ALLOW_CAPTCHA_BYPASS: "false"
       Code:
