@@ -44,7 +44,7 @@ command builds, provisions infrastructure, uploads, and configures DNS.
 | **Origin restriction** | Lambda rejects requests from unknown domains using `urlparse` exact matching (403) |
 | **Rate limiting** | 3 requests/minute/IP from `requestContext.sourceIp` — sliding window (429) |
 | **CORS** | Restricted to domain (not `*`) |
-| **CSP** | Content-Security-Policy: script-src, connect-src, frame-src restricted to hCaptcha + API Gateway |
+| **CSP** | Content-Security-Policy: script-src, connect-src, frame-src restricted to hCaptcha, API Gateway, Google Analytics |
 | **Concurrency** | Lambda reserved concurrency: 5 |
 | **SPF** | `v=spf1 include:_spf.google.com include:amazonses.com ~all` |
 | **DKIM** | 3 signing keys via Amazon SES |
@@ -178,7 +178,7 @@ Each phase maps to a Superpowers or community skill:
 | **Skill invocation** | `codeql-security-scan` | Community | Multi-language static analysis — 157 queries, 0 automated findings, 3 manual fixes ([report](security-report/codeql/2025-07-09-security-audit.md)) |
 | **Skill invocation** | `checkov-iac-scan` | Community | CloudFormation IaC audit — 22 passed, 0 critical/high, 10 informational ([report](security-report/checkov/summary-report.md)) |
 | **Bug diagnosis** | `systematic-debugging` | Superpowers | Debugged Lambda::Url block, DMARC alignment, JMESPath syntax, CF policy IDs, CSP hCaptcha blocking, template indentation crashes |
-| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 69 tests + lint before every completion claim |
+| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 73 tests + lint before every completion claim |
 | **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
 | **Code review response** | `receiving-code-review` | Superpowers | Security audit feedback: dev-bypass gating, CSP hardening, error message sanitization |
 | **Browser testing** | `Playwright MCP` | OpenCode | Automated end-to-end browser testing of contact form and CSP |
