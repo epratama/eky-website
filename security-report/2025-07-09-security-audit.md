@@ -135,20 +135,47 @@ default-src 'self'; script-src 'self' https://js.hcaptcha.com https://hcaptcha.c
 
 ## Actions Taken During Audit
 
-1. Fixed: `dev-bypass` captcha token gated behind `ALLOW_CAPTCHA_BYPASS` env var (production = `"false"`)
-2. Fixed: Frontend `hcaptcha_token: token || 'dev-bypass'` gated behind `import.meta.env.DEV`
-3. Fixed: Added `_esc` single-quote escaping to template.yaml inline Lambda
+1. ✅ Fixed: `dev-bypass` captcha token gated behind `ALLOW_CAPTCHA_BYPASS` env var (production = `"false"`)
+2. ✅ Fixed: Frontend `hcaptcha_token: token || 'dev-bypass'` gated behind `import.meta.env.DEV`
+3. ✅ Fixed: Added `_esc` single-quote escaping to template.yaml inline Lambda
+4. ✅ Fixed (TDD): Origin check bypass — replaced substring match with urlparse exact comparison (+www handling)
+5. ✅ Fixed (TDD): Rate limit IP spoofing — uses `requestContext.http.sourceIp` first, X-Forwarded-For as fallback
+6. ✅ Fixed: Input length limits — name ≤200, email ≤254, mobile ≤50, message ≤10000
+7. ✅ Fixed: Control chars `\r\n\t` stripped from name before email subject
+8. ✅ Fixed: Removed `ses:SendRawEmail` from IAM policy (least privilege)
+9. ✅ Fixed: CSP meta tag added to index.html
+10. ✅ Fixed: Clickjacking protection via CloudFront `FrameOptions: DENY` (already configured)
+11. ✅ Fixed: Removed hCaptcha test sitekey fallback (`10000000-ffff-ffff-ffff-000000000001`)
+12. ✅ Fixed: Education URLs validated to start with `https://`
+13. ✅ Fixed: Template.yaml indentation error in input validation block
+14. ✅ Fixed: ALLOWED_ORIGIN conditional on HasCustomDomain to avoid broken origin check without custom domain
+15. ⚠️ Documented: Per-container rate store limitation — each Lambda container has isolated counters. Mitigated by reserved concurrency (5) and correct source IP. Full fix requires DynamoDB or WAF.
 
----
+### Re-audit Results
 
-## Recommended Priority Order
+| Original Finding | Status |
+|---|---|
+| CRITICAL: Origin check bypass | ✅ Fixed — urlparse exact matching |
+| HIGH: X-Forwarded-For spoofing | ✅ Fixed — requestContext.sourceIp |
+| HIGH: Per-container rate store | ⚠️ Documented — DynamoDB/WAF tradeoff |
+| MEDIUM: Open CORS default | ✅ Fixed — ALLOWED_ORIGIN conditional |
+| MEDIUM: No input length limits | ✅ Fixed |
+| MEDIUM: Excess ses:SendRawEmail | ✅ Fixed |
+| MEDIUM: Unescaped email subject | ✅ Fixed — control chars stripped |
+| MEDIUM: No CSP | ✅ Fixed |
+| MEDIUM: No clickjacking | ✅ Fixed — CloudFront FrameOptions: DENY |
+| LOW: Text body unescaped | ⚠️ Acceptable — text/plain, no XSS risk |
+| LOW: Test sitekey fallback | ✅ Fixed — removed |
+| LOW: Unvalidated external URLs | ✅ Fixed — https:// prefix check |
+| LOW: Unbounded email length | ✅ Fixed — ≤254 char limit |
+| LOW: Dynamic script without SRI | ⚠️ Acceptable — hCaptcha doesn't publish SRI |
 
-1. **Fix origin check** (CRITICAL) — exact URL matching instead of substring
-2. **Fix rate limit IP** (HIGH) — use `requestContext.http.sourceIp`
-3. **Fix rate store persistence** (HIGH) — DynamoDB or WAF
-4. **Add input length limits** (MEDIUM)
-5. **Add CSP header** (MEDIUM) — via CloudFront ResponseHeadersPolicy
-6. **Remove ses:SendRawEmail** (MEDIUM)
-7. **Strip control chars from email subject** (MEDIUM)
-8. **Remove test sitekey fallback** (LOW)
-9. **Validate external URLs** (LOW)
+### Test Coverage
+
+| Suite | Before | After |
+|---|---|---|
+| Backend (pytest) | 13 | 20 |
+| Frontend (Vitest) | 12 | 12 |
+| Deploy (bash) | 13 | 13 |
+| Template (bash) | 17 | 17 |
+| **Total** | **55** | **62** |
