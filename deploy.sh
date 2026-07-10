@@ -18,6 +18,7 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 
 HCAPTCHA_SITEKEY="e1d21a02-d3c8-4d2e-aee0-7e3671820d2a"
+GTM_ID="G-WLDLS0R82Z"
 
 # Check if stack exists, fetch current values
 STACK_EXISTS=false
@@ -366,7 +367,7 @@ echo "CDN:      $DIST_DOMAIN"
 echo ""
 echo "=== Building ==="
 cd "$SCRIPT_DIR/frontend"
-VITE_LAMBDA_URL="$LAMBDA_URL" VITE_HCAPTCHA_SITEKEY="$HCAPTCHA_SITEKEY" npm run build
+VITE_LAMBDA_URL="$LAMBDA_URL" VITE_HCAPTCHA_SITEKEY="$HCAPTCHA_SITEKEY" VITE_GTM_ID="$GTM_ID" npm run build
 cd "$SCRIPT_DIR"
 
 # Upload
