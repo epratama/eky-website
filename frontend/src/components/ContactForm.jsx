@@ -182,6 +182,9 @@ export default function ContactForm() {
               placeholder="+61 400 000 000"
               autoComplete="tel"
             />
+            {errors.mobile && (
+              <p className="mt-1 font-body text-xs font-semibold text-red-600">{errors.mobile}</p>
+            )}
           </div>
 
           <div>
