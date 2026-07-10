@@ -17,6 +17,9 @@ if [ ${#missing[@]} -gt 0 ]; then
   exit 1
 fi
 
+# Load saved config
+[ -f "$SCRIPT_DIR/.env" ] && . "$SCRIPT_DIR/.env"
+
 HCAPTCHA_SITEKEY="e1d21a02-d3c8-4d2e-aee0-7e3671820d2a"
 GTM_ID="${GTM_ID:-}"
 
@@ -57,6 +60,14 @@ echo ""
 if [ -t 0 ]; then
   read -p "Google Analytics ID (${GTM_ID:-}, leave empty to skip): " GTM_INPUT
   GTM_ID="${GTM_INPUT:-$GTM_ID}"
+  # Persist for next run
+  if [ -n "$GTM_ID" ]; then
+    if grep -q "^GTM_ID=" "$SCRIPT_DIR/.env" 2>/dev/null; then
+      sed -i '' "s/^GTM_ID=.*/GTM_ID=$GTM_ID/" "$SCRIPT_DIR/.env"
+    else
+      echo "GTM_ID=$GTM_ID" >> "$SCRIPT_DIR/.env"
+    fi
+  fi
 fi
 
 # ====== SES email verification ======
