@@ -25,6 +25,7 @@ describe('App', () => {
     expect(document.getElementById('skills')).toBeInTheDocument()
     expect(document.getElementById('education')).toBeInTheDocument()
     expect(document.getElementById('contact')).toBeInTheDocument()
+    expect(document.getElementById('showcase')).toBeInTheDocument()
   })
 
   it('renders the updated title', () => {
@@ -42,13 +43,21 @@ describe('App', () => {
     expect(swiftPos).toBeLessThan(internetrixPos)
   })
 
-  it('renders GitHub links in Hero and Footer', () => {
+  it('renders GitHub links in Hero, Footer, and BuildShowcase', () => {
     render(<App />)
-    const links = screen.getAllByRole('link', { name: /github/i })
-    expect(links).toHaveLength(2)
-    links.forEach((link) => {
+    const profileLinks = screen.getAllByRole('link', { name: 'GitHub' })
+    expect(profileLinks).toHaveLength(2)
+    profileLinks.forEach((link) => {
       expect(link).toHaveAttribute('href', 'https://github.com/epratama')
     })
+    const repoLink = screen.getByRole('link', { name: /See the code/ })
+    expect(repoLink).toHaveAttribute('href', 'https://github.com/epratama/eky-website')
+  })
+
+  it('renders the build showcase section', () => {
+    render(<App />)
+    expect(screen.getByText('Want to know how this site was built?')).toBeInTheDocument()
+    expect(screen.getByText('See the code on GitHub →')).toBeInTheDocument()
   })
 
   it('CSP allows favicon data URI, hCaptcha, and API Gateway connections', () => {

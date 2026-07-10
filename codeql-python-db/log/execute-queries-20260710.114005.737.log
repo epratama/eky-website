@@ -1,0 +1,21 @@
+[2026-07-10 11:40:05] This is codeql execute queries -J-Xmx2612M --off-heap-ram=2756 --verbosity=progress --logdir=/Users/epratama/Sites/opencode/website-resume/codeql-python-db/log --evaluator-log-level=5 --warnings=show --qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml --dynamic-join-order-mode=none --no-rerun --interpret-passthrough=null,--format=sarif-latest,-o=/Users/epratama/Sites/opencode/website-resume/security-report/python-codeql.sarif,--max-paths=4,--csv-location-format=line-column,--print-diagnostics-summary,--print-metrics-summary,--qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml,--,/Users/epratama/Sites/opencode/website-resume/codeql-python-db,codeql/python-queries:codeql-suites/python-security-extended.qls --output=/Users/epratama/Sites/opencode/website-resume/codeql-python-db/results -- /Users/epratama/Sites/opencode/website-resume/codeql-python-db/db-python codeql/python-queries:codeql-suites/python-security-extended.qls
+[2026-07-10 11:40:05] Calling plumbing command: codeql resolve queries --qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml --format=json -- codeql/python-queries:codeql-suites/python-security-extended.qls
+[2026-07-10 11:40:05] Exception caught at top level: Query pack codeql/python-queries:codeql-suites/python-security-extended.qls cannot be found. Check the spelling of the pack.
+                      com.semmle.cli2.resolve.ResolveQueriesCommand.resolveQuerySpecifier(ResolveQueriesCommand.java:298)
+                      com.semmle.cli2.resolve.ResolveQueriesCommand.executeJSON(ResolveQueriesCommand.java:211)
+                      com.semmle.cli2.resolve.ResolveQueriesCommand.executeJSON(ResolveQueriesCommand.java:68)
+                      com.semmle.cli2.picocli.SimpleJsonSubcommand.executeInsistingOnJSONWithExistingMessages(SimpleJsonSubcommand.java:121)
+                      com.semmle.cli2.picocli.SubcommandCommon.withCompilationMessages(SubcommandCommon.java:444)
+                      com.semmle.cli2.picocli.SimpleJsonSubcommand.executeInsistingOnJSON(SimpleJsonSubcommand.java:110)
+                      com.semmle.cli2.picocli.PlumbingRunner.call(PlumbingRunner.java:61)
+                      com.semmle.cli2.picocli.SubcommandCommon.callPlumbingInProcess(SubcommandCommon.java:170)
+                      com.semmle.cli2.execute.ExecuteQueriesCommand.executeSubcommand(ExecuteQueriesCommand.java:438)
+                      com.semmle.cli2.picocli.SubcommandCommon.lambda$executeSubcommandWithMessages$5(SubcommandCommon.java:886)
+                      com.semmle.cli2.picocli.SubcommandCommon.withCompilationMessages(SubcommandCommon.java:444)
+                      com.semmle.cli2.picocli.SubcommandCommon.executeSubcommandWithMessages(SubcommandCommon.java:884)
+                      com.semmle.cli2.picocli.SubcommandCommon.toplevelMain(SubcommandCommon.java:777)
+                      com.semmle.cli2.picocli.SubcommandCommon.call(SubcommandCommon.java:757)
+                      com.semmle.cli2.picocli.SubcommandMaker.runMain(SubcommandMaker.java:238)
+                      com.semmle.cli2.picocli.SubcommandMaker.runMain(SubcommandMaker.java:259)
+                      com.semmle.cli2.CodeQL.main(CodeQL.java:113)
+[2026-07-10 11:40:05] [SPAMMY] execute queries> Failed to write 1 diagnostics for execute queries since this subcommand could not determine its diagnostic directory.

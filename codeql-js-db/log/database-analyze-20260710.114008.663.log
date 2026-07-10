@@ -1,0 +1,13 @@
+[2026-07-10 11:40:08] This is codeql database analyze codeql-js-db --format=sarif-latest --output=security-report/javascript-codeql.sarif codeql/javascript-queries:codeql-suites/javascript-security-extended.qls
+[2026-07-10 11:40:08] Log file was started late.
+[2026-07-10 11:40:08] [PROGRESS] database analyze> Running queries.
+[2026-07-10 11:40:08] Running plumbing command: codeql database run-queries --evaluator-log-level=5 --warnings=show --qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml --dynamic-join-order-mode=none --no-rerun --interpret-passthrough=null,--format=sarif-latest,-o=/Users/epratama/Sites/opencode/website-resume/security-report/javascript-codeql.sarif,--max-paths=4,--csv-location-format=line-column,--print-diagnostics-summary,--print-metrics-summary,--qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml,--,/Users/epratama/Sites/opencode/website-resume/codeql-js-db,codeql/javascript-queries:codeql-suites/javascript-security-extended.qls -- /Users/epratama/Sites/opencode/website-resume/codeql-js-db codeql/javascript-queries:codeql-suites/javascript-security-extended.qls
+[2026-07-10 11:40:08] Calling plumbing command: codeql resolve ram --dataset=/Users/epratama/Sites/opencode/website-resume/codeql-js-db/db-javascript --format=json
+[2026-07-10 11:40:08] Plumbing command codeql resolve ram completed:
+                      [
+                        "-J-Xmx2598M",
+                        "--off-heap-ram=2738"
+                      ]
+[2026-07-10 11:40:08] Chaining via /var/folders/6_/zmgcs5nx51l3sb58d30_0lsr0000gn/T/codeql.XXXXXXXX.CGumlQ1vAS to plumbing: execute queries -J-Xmx2598M --off-heap-ram=2738 --verbosity=progress --logdir=/Users/epratama/Sites/opencode/website-resume/codeql-js-db/log --evaluator-log-level=5 --warnings=show --qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml --dynamic-join-order-mode=none --no-rerun --interpret-passthrough=null,--format=sarif-latest,-o=/Users/epratama/Sites/opencode/website-resume/security-report/javascript-codeql.sarif,--max-paths=4,--csv-location-format=line-column,--print-diagnostics-summary,--print-metrics-summary,--qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml,--,/Users/epratama/Sites/opencode/website-resume/codeql-js-db,codeql/javascript-queries:codeql-suites/javascript-security-extended.qls --output=/Users/epratama/Sites/opencode/website-resume/codeql-js-db/results -- /Users/epratama/Sites/opencode/website-resume/codeql-js-db/db-javascript codeql/javascript-queries:codeql-suites/javascript-security-extended.qls
+[2026-07-10 11:40:08] Plumbing command codeql database run-queries completed with status 70.
+[2026-07-10 11:40:08] Exiting with code 70

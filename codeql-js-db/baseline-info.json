@@ -1,0 +1,1 @@
+{"languages":{"javascript":{"displayName":"JavaScript/TypeScript","files":["vitest.config.js","tailwind.config.js","vite.config.js","postcss.config.js","src/__tests__/useScrollReveal.test.js","src/__tests__/setup.js","src/hooks/useScrollReveal.js"],"linesOfCode":140,"name":"javascript"},"actions":{"displayName":"GitHub Actions","files":[],"linesOfCode":0,"name":"actions"}}}
