@@ -121,15 +121,16 @@ Identified technical friction points during development and built automated guar
 │ deploy.sh│─▶│  browser │─▶│  verify  │─▶│systematic│◀──────┘
 │ 1-cmd CI │  │  test    │  │  gate    │  │  debug   │
 └──────────┘  │(Playwrgt)│  └──────────┘  └────┬─────┘
-              └──────────┘                     │
-                                               ▼
-                                         ┌──────────┐
-                                         │ codeql-  │
-                                         │ security │
-                                         │  audit   │
-                                         └────┬─────┘
-                                              │
-                                              ▼
+              └──────────┘                      │
+                                                ▼
+                                          ┌──────────┐  ┌──────────┐
+                                          │ codeql-  │  │ checkov- │
+                                          │ security │  │ iac-scan │
+                                          │  audit   │  │  audit   │
+                                          └────┬─────┘  └────┬─────┘
+                                               │              │
+                                               └──────┬───────┘
+                                                      ▼
 ┌──────────────────────────────────────────────────┐
 │       LOOP: fix → TDD → review → deploy          │
 │       repeat until zero issues                   │
@@ -142,7 +143,7 @@ Each phase maps to a Superpowers or community skill:
 **subagent-driven-development** (parallel execution) → **requesting/receiving-code-review** →
 **deploy.sh** (CI/CD) → **Playwright MCP** (browser testing) →
 **systematic-debugging** (diagnose failures) → **verification-before-completion** (quality gate) →
-**codeql-security-scan** (audit findings) → loop until zero issues.
+**codeql-security-scan** (audit findings) + **checkov-iac-scan** (IaC audit) → loop until zero issues.
 
 ---
 
