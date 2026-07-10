@@ -13,6 +13,7 @@ SENDER_EMAIL = os.environ["SENDER_EMAIL"]
 HCAPTCHA_SECRET = os.environ["HCAPTCHA_SECRET"]
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "")
 DOMAIN_NAME = os.environ.get("DOMAIN_NAME", "")
+ALLOW_CAPTCHA_BYPASS = os.environ.get("ALLOW_CAPTCHA_BYPASS", "") == "true"
 HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify"
 
 ses = boto3.client("ses")
@@ -67,7 +68,7 @@ def handler(event, context):
     if not message:
         return _error("Message is required", HTTPStatus.BAD_REQUEST)
 
-    if captcha_token != "dev-bypass":
+    if not (ALLOW_CAPTCHA_BYPASS and captcha_token == "dev-bypass"):
         data = urllib.parse.urlencode(
             {"secret": HCAPTCHA_SECRET, "response": captcha_token}
         ).encode()

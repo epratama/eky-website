@@ -77,7 +77,7 @@ export default function ContactForm() {
           email: currentForm.email,
           mobile: currentForm.mobile || undefined,
           message: currentForm.message,
-          hcaptcha_token: token || 'dev-bypass',
+          hcaptcha_token: import.meta.env.DEV ? (token || 'dev-bypass') : token,
         }),
       })
 

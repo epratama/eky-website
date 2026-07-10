@@ -15,6 +15,7 @@ os.environ.setdefault("SENDER_EMAIL", "sender@test.com")
 os.environ.setdefault("HCAPTCHA_SECRET", "test-secret")
 os.environ["ALLOWED_ORIGIN"] = "https://ekyputrapratama.com"
 os.environ["DOMAIN_NAME"] = "ekyputrapratama.com"
+os.environ["ALLOW_CAPTCHA_BYPASS"] = "true"
 
 # Mock boto3 before importing lambda (module-level boto3.client call)
 fake_ses = MagicMock()
@@ -105,6 +106,25 @@ def test_rate_limit_resets_after_window():
     body, status = parse_response(resp)
     assert status == HTTPStatus.OK
     handler.time.time = old_time
+
+# --- Captcha bypass security gate ---
+
+def test_dev_bypass_blocked_when_not_allowed():
+    prev = os.environ.pop("ALLOW_CAPTCHA_BYPASS", None)
+    spec3 = importlib.util.spec_from_file_location("lam3", os.path.join(os.path.dirname(__file__), "lambda.py"))
+    lam3 = importlib.util.module_from_spec(spec3)
+    with patch.dict(sys.modules, {"boto3": fake_boto3}):
+        spec3.loader.exec_module(lam3)
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com"},
+    )
+    response = lam3.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.BAD_REQUEST
+    assert "Captcha verification failed" in body.get("error", "")
+    if prev is not None:
+        os.environ["ALLOW_CAPTCHA_BYPASS"] = prev
 
 # --- CORS ---
 
