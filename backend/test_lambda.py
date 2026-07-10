@@ -237,6 +237,66 @@ def test_rejects_empty_message():
     assert status == HTTPStatus.BAD_REQUEST
     assert "Message is required" in body.get("error", "")
 
+def test_rejects_name_too_long():
+    event = api_event(
+        {"name": "A" * 201, "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.BAD_REQUEST
+    assert "Name too long" in body.get("error", "")
+
+def test_rejects_email_too_long():
+    event = api_event(
+        {"name": "T", "email": "a" * 250 + "@b.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.BAD_REQUEST
+    assert "Email too long" in body.get("error", "")
+
+def test_rejects_mobile_too_long():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "mobile": "1" * 51, "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.BAD_REQUEST
+    assert "Mobile too long" in body.get("error", "")
+
+def test_rejects_message_too_long():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "message": "X" * 10001, "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.BAD_REQUEST
+    assert "Message too long" in body.get("error", "")
+
+def test_strips_crlf_from_mobile():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "mobile": "+61\r\n400", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.OK
+    assert body.get("success") is True
+
+def test_strips_crlf_from_name():
+    event = api_event(
+        {"name": "Test\r\nUser", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.OK
+    assert body.get("success") is True
+
 def test_rejects_invalid_json():
     event = {"headers": {"origin": "https://ekyputrapratama.com"}, "body": "not json"}
     response = handler.handler(event, None)
