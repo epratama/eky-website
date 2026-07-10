@@ -239,11 +239,11 @@ Single command deploys everything:
 | Phase | What happens |
 |---|---|
 | **Pre-flight** | Checks `aws`, `jq`, `npm` installed. Queries CloudFormation for existing stack config. |
-| **Interactive prompts** | Sender/recipient emails (prefilled from stack if exists), hCaptcha secret (hidden input). |
+| **Interactive prompts** | Sender/recipient emails (prefilled from stack if exists), hCaptcha secret (hidden input), Google Analytics ID (optional, leave empty to skip). |
 | **SES email verification** | Checks if sender + recipient are verified in SES. If not: sends verification email, polls every 5s (up to 2.5 min) until confirmed. Declining aborts deploy. |
 | **ACM certificate** | Auto-searches for existing ISSUED cert in us-east-1. If found: reuses. If PENDING: shows DNS records and exits. If none: offers to request new, shows validation CNAMEs. |
 | **CloudFormation deploy** | Builds parameter overrides, runs `cloudformation deploy`. After deploy: verifies DomainName + CertificateArn were applied, warns if not. |
-| **Build + upload** | Runs `vite build` with API Gateway URL + hCaptcha site key. Syncs `dist/` to S3 with `--delete`. Creates CloudFront invalidation. |
+| **Build + upload** | Runs `vite build` with API Gateway URL + hCaptcha site key + Analytics ID. Syncs `dist/` to S3 with `--delete`. Creates CloudFront invalidation. |
 | **Route53 DNS** | If custom domain configured: finds hosted zone, auto-creates ALIAS A records (root + www) pointing to CloudFront. Skips if already correct. |
 
 All operations are idempotent — running twice produces the same result.
