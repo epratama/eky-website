@@ -1,9 +1,9 @@
 # Security Audit Report
 
-**Date**: 2025-07-09
+**Date**: 2025-07-09 (updated 2025-07-10)
 **Project**: eky-website (portfolio website)
 **Languages**: Python (backend), JavaScript/TypeScript (frontend), YAML (infrastructure)
-**Methodology**: Manual code review + CodeQL detection
+**Tools**: Manual code review, CodeQL security-extended suite v2.26.0
 
 ---
 
@@ -175,7 +175,26 @@ default-src 'self'; script-src 'self' https://js.hcaptcha.com https://hcaptcha.c
 | Suite | Before | After |
 |---|---|---|
 | Backend (pytest) | 13 | 20 |
-| Frontend (Vitest) | 12 | 12 |
+| Frontend (Vitest) | 12 | 13 |
 | Deploy (bash) | 13 | 13 |
 | Template (bash) | 17 | 17 |
-| **Total** | **55** | **62** |
+| **Total** | **55** | **63** |
+
+---
+
+## CodeQL Automated Scan (2025-07-10)
+
+| Language | Queries Run | Automated Findings |
+|---|---|---|
+| Python | 52 | 0 |
+| JavaScript/TypeScript | 105 | 0 |
+
+3 manual findings from post-CodeQL review:
+
+| # | Severity | File | Issue | Fix |
+|---|----------|------|-------|-----|
+| 1 | MEDIUM | `ContactForm.jsx:92` | `err.message` exposed to users (CWE-209) | Replaced with generic message + `console.error` |
+| 2 | LOW | `lambda.py:99` | `mobile` field not stripped of CR/LF | Applied same `re.sub(r"[\r\n\t]")` as name |
+| 3 | INFO | `lambda.py:52` | X-Forwarded-For fallback for rate limit IP | Acceptable — defense-in-depth; `requestContext.sourceIp` is primary source |
+
+All 3 findings fixed in commit `181ef89`.
