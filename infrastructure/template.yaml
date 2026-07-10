@@ -281,9 +281,9 @@ Resources:
                   return _error("Mobile too long", HTTPStatus.BAD_REQUEST)
               if len(message) > 10000:
                   return _error("Message too long", HTTPStatus.BAD_REQUEST)
-               name = re.sub(r"[\r\n\t]", " ", name)
-               if mobile:
-                   mobile = re.sub(r"[\r\n\t]", " ", mobile)
+              name = re.sub(r"[\r\n\t]", " ", name)
+              if mobile:
+                  mobile = re.sub(r"[\r\n\t]", " ", mobile)
               if not (ALLOW_CAPTCHA_BYPASS and captcha_token == "dev-bypass"):
                   data = urllib.parse.urlencode({"secret": HCAPTCHA_SECRET, "response": captcha_token}).encode()
                   req = urllib.request.Request(HCAPTCHA_VERIFY_URL, data=data, method="POST")
