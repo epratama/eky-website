@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import App from '../components/App'
+
+function getCspMetaContent() {
+  const html = readFileSync(resolve(__dirname, '../../index.html'), 'utf-8')
+  const match = html.match(/<meta[^>]*http-equiv="Content-Security-Policy"[^>]*content="([^"]*)"[^>]*>/)
+  return match ? match[1] : ''
+}
 
 describe('App', () => {
   it('renders without crashing', () => {
@@ -41,5 +49,15 @@ describe('App', () => {
     links.forEach((link) => {
       expect(link).toHaveAttribute('href', 'https://github.com/epratama')
     })
+  })
+
+  it('CSP allows favicon data URI, hCaptcha, and API Gateway connections', () => {
+    const csp = getCspMetaContent()
+    expect(csp).toContain("img-src 'self' data:")
+    expect(csp).toContain('connect-src')
+    expect(csp).toContain('*.hcaptcha.com')
+    expect(csp).toContain('*.amazonaws.com')
+    expect(csp).toContain("frame-src")
+    expect(csp).toContain("form-action 'self'")
   })
 })
