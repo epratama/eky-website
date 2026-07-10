@@ -19,6 +19,7 @@ HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify"
 
 ses = boto3.client("ses")
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+PHONE_RE = re.compile(r"^[+]?[\d\s\-().]{6,20}$")
 rate_store = {}
 
 
@@ -82,6 +83,8 @@ def handler(event, context):
         return _error("Email too long", HTTPStatus.BAD_REQUEST)
     if len(mobile) > 50:
         return _error("Mobile too long", HTTPStatus.BAD_REQUEST)
+    if mobile and not PHONE_RE.match(mobile):
+        return _error("Invalid mobile", HTTPStatus.BAD_REQUEST)
     if len(message) > 10000:
         return _error("Message too long", HTTPStatus.BAD_REQUEST)
 

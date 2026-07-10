@@ -297,6 +297,36 @@ def test_strips_crlf_from_name():
     assert status == HTTPStatus.OK
     assert body.get("success") is True
 
+def test_rejects_mobile_with_letters():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "mobile": "hello world", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.BAD_REQUEST
+    assert "Invalid mobile" in body.get("error", "")
+
+def test_accepts_valid_mobile():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "mobile": "+61 400 000 000", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.OK
+    assert body.get("success") is True
+
+def test_empty_mobile_passes():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "mobile": "", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.OK
+    assert body.get("success") is True
+
 def test_rejects_invalid_json():
     event = {"headers": {"origin": "https://ekyputrapratama.com"}, "body": "not json"}
     response = handler.handler(event, None)

@@ -49,6 +49,7 @@ export default function ContactForm() {
       errs.email = 'Invalid email format'
     }
     if (!form.message.trim()) errs.message = 'Message is required'
+    if (form.mobile.trim() && !/^[+]?[\d\s\-().]{6,20}$/.test(form.mobile.trim())) errs.mobile = 'Enter a valid phone number'
     return errs
   }
 
@@ -173,6 +174,8 @@ export default function ContactForm() {
             <input
               id="mobile"
               type="tel"
+              pattern="[+]?[\d\s\-().]{6,20}"
+              title="Enter a valid phone number (e.g. +61 400 000 000)"
               value={form.mobile}
               onChange={handleChange('mobile')}
               className={inputClass('mobile')}

@@ -2,7 +2,7 @@
 
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
 command builds, provisions infrastructure, uploads, and configures DNS.
-70 tests across 4 suites. 14 AWS resources managed via CloudFormation.
+73 tests across 4 suites. 14 AWS resources managed via CloudFormation.
  Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills & Tools Used](#skills--tools-used)).
 
 ---
@@ -157,7 +157,7 @@ Each phase maps to a Superpowers or community skill:
 | **Hosting** | S3 + CloudFront (HTTPS, HTTP/3, HTTP/2, compression) |
 | **DNS** | Route53 (ALIAS A, SPF TXT, DKIM CNAMEs, DMARC TXT, SES verification TXT, MAIL FROM MX) |
 | **IaC** | CloudFormation (14 resources, 6 parameters) |
-| **Testing** | Vitest + testing-library (16), pytest (26), bash mocks (30) |
+| **Testing** | Vitest + testing-library (16), pytest (29), bash mocks (30) |
 | **Design** | Neo-brutalism (ui-ux-pro-max design system) |
 | **CI/CD** | `deploy.sh` — 1 command: build → deploy → invalidate |
 
@@ -190,10 +190,10 @@ Each phase maps to a Superpowers or community skill:
 | Suite | Language | Tests | Command |
 |---|---|---|---|
 | **Frontend components** | JSX (Vitest) | 16 | `cd frontend && npm test` |
-| **Lambda backend** | Python (pytest) | 26 | `cd backend && .venv/bin/pytest` |
+| **Lambda backend** | Python (pytest) | 29 | `cd backend && .venv/bin/pytest` |
 | **Deploy script** | Bash (mocks) | 13 | `./test-deploy.sh` |
 | **CF template** | Bash (validation) | 17 | `./test-template.sh` |
-| **Total** | | **70** | |
+| **Total** | | **73** | |
 
 ### What the tests cover
 
@@ -203,7 +203,7 @@ Each phase maps to a Superpowers or community skill:
 | **Contact form** | Field rendering, empty validation, email format, filled form clears errors |
 | **Scroll reveal** | Returns `{ref, isVisible}`, `prefers-reduced-motion` → immediate |
 | **Experience** | Descending chronological order (current role before internship) |
-| **Lambda validation** | Name/email/message required, max lengths, mobile CR/LF stripping, email format, JSON decode error |
+| **Lambda validation** | Name/email/message required, max lengths, mobile format + CR/LF stripping, email format, JSON decode error |
 | **Lambda security** | Origin exact-matching, rate limit (3/min then 429, requestContext.sourceIp), CORS restriction, HTML escaping, captcha bypass gated |
 | **Deploy flow** | Stack check, SES verify/decline/auto-verify, cert detect (issued/pending/none), cert request, Route53 DNS (skip/update/non-Route53) |
 | **CF template** | Syntax validation, key resources present, 6 parameters, secrets marked `NoEcho` |
