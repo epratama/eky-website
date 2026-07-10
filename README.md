@@ -173,7 +173,7 @@ Each phase maps to a Superpowers or community skill:
 | **Skill invocation** | `ui-ux-pro-max` | Community | Neo-brutalist design system (styles, palettes, fonts, spacing) |
 | **Skill invocation** | `ponytail` | Community | Over-engineering audits: cut dead code, removed unused dependencies |
 | **Skill invocation** | `test-driven-development` | Superpowers | RED-GREEN-REFACTOR cycle: tests written before implementation |
-| **Skill invocation** | `codeql-security-scan` | Community | Multi-language static analysis — 157 queries, 0 automated findings, 3 manual fixes ([report](security-report/2025-07-09-security-audit.md)) |
+| **Skill invocation** | `codeql-security-scan` | Community | Multi-language static analysis — 157 queries, 0 automated findings, 3 manual fixes ([report](security-report/2025-07-09-security-audit.md), [codeql/](security-report/codeql/)) |
 | **Bug diagnosis** | `systematic-debugging` | Superpowers | Debugged Lambda::Url block, DMARC alignment, JMESPath syntax, CF policy IDs, CSP hCaptcha blocking, template indentation crashes |
 | **Quality gate** | `verification-before-completion` | Superpowers | Ran all 69 tests + lint before every completion claim |
 | **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
@@ -218,7 +218,7 @@ process behind the product:
 |---|---|---|
 | [`docs/superpowers/specs/2025-07-09-resume-website-design.md`](docs/superpowers/specs/2025-07-09-resume-website-design.md) | **Design spec** — requirements, constraints, architecture decisions, neo-brutalism design tokens, responsive breakpoints, TDD strategy. 252 lines covering the "what and why" before code was written. |
 | [`docs/superpowers/plans/2025-07-09-resume-website.md`](docs/superpowers/plans/2025-07-09-resume-website.md) | **Implementation plan** — 20-task executable roadmap with file paths, dependencies, and test-first requirements. 2006 lines executed via TDD + subagent-driven-development. |
-| [`security-report/2025-07-09-security-audit.md`](security-report/2025-07-09-security-audit.md) | **Security audit** — multi-language CodeQL analysis: 157 queries (0 automated findings), manual review findings with severity ratings, and verified fixes. Includes SARIF output files for both Python and JavaScript. |
+| [`security-report/2025-07-09-security-audit.md`](security-report/2025-07-09-security-audit.md) | **Security audit** — multi-language CodeQL analysis: 157 queries (0 automated findings), manual review findings with severity ratings, and verified fixes. Per-language reports and SARIF output in [`codeql/`](security-report/codeql/). |
 
 ---
 
