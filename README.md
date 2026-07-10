@@ -116,7 +116,7 @@ Identified technical friction points during development and built automated guar
 | **Hosting** | S3 + CloudFront (HTTPS, HTTP/3, HTTP/2, compression) |
 | **DNS** | Route53 (ALIAS A, SPF TXT, DKIM CNAMEs, DMARC TXT, SES verification TXT, MAIL FROM MX) |
 | **IaC** | CloudFormation (14 resources, 6 parameters) |
-| **Testing** | Vitest + testing-library (12), pytest (13), bash mocks (30) |
+| **Testing** | Vitest + testing-library (12), pytest (20), bash mocks (30) |
 | **Design** | Neo-brutalism (ui-ux-pro-max design system) |
 | **CI/CD** | `deploy.sh` — 1 command: build → deploy → invalidate |
 
@@ -158,8 +158,8 @@ Identified technical friction points during development and built automated guar
 | **Contact form** | Field rendering, empty validation, email format, filled form clears errors |
 | **Scroll reveal** | Returns `{ref, isVisible}`, `prefers-reduced-motion` → immediate |
 | **Experience** | Descending chronological order (current role before internship) |
-| **Lambda validation** | Name/email/message required, email format, JSON decode error |
-| **Lambda security** | Origin rejection, rate limit (3/min then 429), CORS restriction, HTML escaping |
+| **Lambda validation** | Name/email/message required, email format, max lengths, JSON decode error |
+| **Lambda security** | Origin exact-matching, rate limit (3/min then 429, requestContext.sourceIp), CORS restriction, HTML escaping, captcha bypass gated |
 | **Deploy flow** | Stack check, SES verify/decline/auto-verify, cert detect (issued/pending/none), cert request, Route53 DNS (skip/update/non-Route53) |
 | **CF template** | Syntax validation, key resources present, 6 parameters, secrets marked `NoEcho` |
 
