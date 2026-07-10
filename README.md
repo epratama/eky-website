@@ -2,7 +2,7 @@
 
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
 command builds, provisions infrastructure, uploads, and configures DNS.
-55 tests across 4 suites. 14 AWS resources managed via CloudFormation.
+62 tests across 4 suites. 14 AWS resources managed via CloudFormation.
  Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills & Tools Used](#skills--tools-used)).
 
 ---
@@ -145,10 +145,10 @@ Identified technical friction points during development and built automated guar
 | Suite | Language | Tests | Command |
 |---|---|---|---|
 | **Frontend components** | JSX (Vitest) | 12 | `cd frontend && npm test` |
-| **Lambda backend** | Python (pytest) | 13 | `cd backend && .venv/bin/pytest` |
+| **Lambda backend** | Python (pytest) | 20 | `cd backend && .venv/bin/pytest` |
 | **Deploy script** | Bash (mocks) | 13 | `./test-deploy.sh` |
 | **CF template** | Bash (validation) | 17 | `./test-template.sh` |
-| **Total** | | **55** | |
+| **Total** | | **62** | |
 
 ### What the tests cover
 

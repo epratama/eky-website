@@ -58,7 +58,7 @@ export default function Education({ education, certifications }) {
                   <p className="font-body text-xs text-brutal-muted mt-0.5">
                     {cert.issuer} — {cert.year}
                   </p>
-                  {cert.url ? (
+                  {cert.url && cert.url.startsWith('https://') ? (
                     <a
                       href={cert.url}
                       target="_blank"

@@ -22,7 +22,7 @@ export default function ContactForm() {
     window.onHCaptchaLoad = () => {
       if (captchaRef.current && window.hcaptcha) {
         captchaWidgetId.current = window.hcaptcha.render(captchaRef.current, {
-          sitekey: import.meta.env.VITE_HCAPTCHA_SITEKEY || '10000000-ffff-ffff-ffff-000000000001',
+          sitekey: import.meta.env.VITE_HCAPTCHA_SITEKEY,
           size: 'invisible',
           callback: (token) => submitForm(token),
           'error-callback': () => {

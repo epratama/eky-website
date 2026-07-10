@@ -74,6 +74,42 @@ def test_accepts_request_from_allowed_origin():
     assert status == HTTPStatus.OK
     assert body.get("success") is True
 
+def test_rejects_origin_substring_bypass_different_tld():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com.evil.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.FORBIDDEN
+
+def test_rejects_origin_substring_bypass_query_param():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://evil.com?q=https://ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.FORBIDDEN
+
+def test_accepts_allowed_origin_with_path():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://ekyputrapratama.com", "referer": "https://ekyputrapratama.com/page"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.OK
+
+def test_rejects_www_subdomain_of_allowed():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"origin": "https://www.ekyputrapratama.com"},
+    )
+    response = handler.handler(event, None)
+    body, status = parse_response(response)
+    assert status == HTTPStatus.OK
+
 # --- Rate limiting ---
 
 def test_rate_limit_rejects_after_3_requests():
@@ -106,6 +142,33 @@ def test_rate_limit_resets_after_window():
     body, status = parse_response(resp)
     assert status == HTTPStatus.OK
     handler.time.time = old_time
+
+def test_rate_limit_uses_request_context_ip_not_spoofed_header():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"x-forwarded-for": "1.2.3.4, 10.0.0.1", "origin": "https://ekyputrapratama.com"},
+    )
+    event["requestContext"] = {"http": {"sourceIp": "5.6.7.8"}}
+    for _ in range(3):
+        resp = handler.handler(event, None)
+        assert parse_response(resp)[1] == HTTPStatus.OK
+    # Even with different spoofed header, same requestContext IP gets limited
+    event2 = dict(event)
+    event2["headers"] = {"x-forwarded-for": "9.9.9.9, 10.0.0.1", "origin": "https://ekyputrapratama.com"}
+    resp = handler.handler(event2, None)
+    body, status = parse_response(resp)
+    assert status == HTTPStatus.TOO_MANY_REQUESTS
+
+def test_rate_limit_falls_back_to_x_forwarded_for():
+    event = api_event(
+        {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
+        headers={"x-forwarded-for": "1.1.1.1", "origin": "https://ekyputrapratama.com"},
+    )
+    for _ in range(3):
+        resp = handler.handler(event, None)
+        assert parse_response(resp)[1] == HTTPStatus.OK
+    resp = handler.handler(event, None)
+    assert parse_response(resp)[1] == HTTPStatus.TOO_MANY_REQUESTS
 
 # --- Captcha bypass security gate ---
 

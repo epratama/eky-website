@@ -5,6 +5,7 @@ import time
 import urllib.request
 import urllib.parse
 from http import HTTPStatus
+from urllib.parse import urlparse
 
 import boto3
 
@@ -24,9 +25,13 @@ rate_store = {}
 def _check_origin(headers):
     if not ALLOWED_ORIGIN:
         return True
-    origin = (headers or {}).get("origin", "")
-    referer = (headers or {}).get("referer", "")
-    return ALLOWED_ORIGIN in origin or ALLOWED_ORIGIN.replace("https://", "") in referer
+    allowed = urlparse(ALLOWED_ORIGIN)
+    origin = urlparse((headers or {}).get("origin", ""))
+    if not origin.netloc:
+        return False
+    allowed_netloc = allowed.netloc.removeprefix("www.")
+    origin_netloc = origin.netloc.removeprefix("www.")
+    return origin.scheme == allowed.scheme and origin_netloc == allowed_netloc
 
 
 def _rate_limit(ip):
@@ -42,7 +47,10 @@ def _rate_limit(ip):
 
 def handler(event, context):
     headers = {k.lower(): v for k, v in event.get("headers", {}).items()}
-    source_ip = (headers.get("x-forwarded-for") or "unknown").split(",")[0].strip()
+    source_ip = (
+        event.get("requestContext", {}).get("http", {}).get("sourceIp")
+        or (headers.get("x-forwarded-for") or "unknown").split(",")[0].strip()
+    )
 
     if not _rate_limit(source_ip):
         return _error("Too many requests. Please wait.", HTTPStatus.TOO_MANY_REQUESTS)
@@ -67,6 +75,17 @@ def handler(event, context):
         return _error("Valid email is required", HTTPStatus.BAD_REQUEST)
     if not message:
         return _error("Message is required", HTTPStatus.BAD_REQUEST)
+
+    if len(name) > 200:
+        return _error("Name too long", HTTPStatus.BAD_REQUEST)
+    if len(email) > 254:
+        return _error("Email too long", HTTPStatus.BAD_REQUEST)
+    if len(mobile) > 50:
+        return _error("Mobile too long", HTTPStatus.BAD_REQUEST)
+    if len(message) > 10000:
+        return _error("Message too long", HTTPStatus.BAD_REQUEST)
+
+    name = re.sub(r"[\r\n\t]", " ", name)
 
     if not (ALLOW_CAPTCHA_BYPASS and captcha_token == "dev-bypass"):
         data = urllib.parse.urlencode(
