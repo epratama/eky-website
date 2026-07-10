@@ -2,7 +2,7 @@
 
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
 command builds, provisions infrastructure, uploads, and configures DNS.
-62 tests across 4 suites. 14 AWS resources managed via CloudFormation.
+63 tests across 4 suites. 14 AWS resources managed via CloudFormation.
  Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills & Tools Used](#skills--tools-used)).
 
 ---
@@ -116,7 +116,7 @@ Identified technical friction points during development and built automated guar
 | **Hosting** | S3 + CloudFront (HTTPS, HTTP/3, HTTP/2, compression) |
 | **DNS** | Route53 (ALIAS A, SPF TXT, DKIM CNAMEs, DMARC TXT, SES verification TXT, MAIL FROM MX) |
 | **IaC** | CloudFormation (14 resources, 6 parameters) |
-| **Testing** | Vitest + testing-library (12), pytest (20), bash mocks (30) |
+| **Testing** | Vitest + testing-library (13), pytest (20), bash mocks (30) |
 | **Design** | Neo-brutalism (ui-ux-pro-max design system) |
 | **CI/CD** | `deploy.sh` — 1 command: build → deploy → invalidate |
 
@@ -144,17 +144,17 @@ Identified technical friction points during development and built automated guar
 
 | Suite | Language | Tests | Command |
 |---|---|---|---|
-| **Frontend components** | JSX (Vitest) | 12 | `cd frontend && npm test` |
+| **Frontend components** | JSX (Vitest) | 13 | `cd frontend && npm test` |
 | **Lambda backend** | Python (pytest) | 20 | `cd backend && .venv/bin/pytest` |
 | **Deploy script** | Bash (mocks) | 13 | `./test-deploy.sh` |
 | **CF template** | Bash (validation) | 17 | `./test-template.sh` |
-| **Total** | | **62** | |
+| **Total** | | **63** | |
 
 ### What the tests cover
 
 | Area | Tests verify |
 |---|---|
-| **App smoke** | Renders without crash, all 7 section IDs, title, social links |
+| **App smoke** | Renders without crash, all 7 section IDs, title, social links, CSP directives verified |
 | **Contact form** | Field rendering, empty validation, email format, filled form clears errors |
 | **Scroll reveal** | Returns `{ref, isVisible}`, `prefers-reduced-motion` → immediate |
 | **Experience** | Descending chronological order (current role before internship) |
