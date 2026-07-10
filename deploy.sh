@@ -18,7 +18,7 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 
 HCAPTCHA_SITEKEY="e1d21a02-d3c8-4d2e-aee0-7e3671820d2a"
-GTM_ID="G-WLDLS0R82Z"
+GTM_ID="${GTM_ID:-}"
 
 # Check if stack exists, fetch current values
 STACK_EXISTS=false
@@ -36,6 +36,7 @@ if aws cloudformation describe-stacks --stack-name "$STACK_NAME" > /dev/null 2>&
   echo "  SiteKey:    $EXISTING_SITEKEY"
   [ -n "$EXISTING_DOMAIN" ] && echo "  Domain:     $EXISTING_DOMAIN"
   echo "  SiteKey now: $HCAPTCHA_SITEKEY"
+  [ -n "$GTM_ID" ] && echo "  GTM ID:     $GTM_ID" || echo "  GTM:        (not set)"
 else
   echo "Stack '$STACK_NAME' does not exist — will create."
 fi
@@ -367,7 +368,7 @@ echo "CDN:      $DIST_DOMAIN"
 echo ""
 echo "=== Building ==="
 cd "$SCRIPT_DIR/frontend"
-VITE_LAMBDA_URL="$LAMBDA_URL" VITE_HCAPTCHA_SITEKEY="$HCAPTCHA_SITEKEY" VITE_GTM_ID="$GTM_ID" npm run build
+VITE_LAMBDA_URL="$LAMBDA_URL" VITE_HCAPTCHA_SITEKEY="$HCAPTCHA_SITEKEY"${GTM_ID:+ VITE_GTM_ID="$GTM_ID"} npm run build
 cd "$SCRIPT_DIR"
 
 # Upload
