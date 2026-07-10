@@ -21,7 +21,7 @@ User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → 
                                     CORS restricted to domain
 ```
 
-- **Frontend**: React 18+ via Vite, no routing, anchor-scroll navigation, 14 Vitest tests. CSP meta tag restricts scripts, fonts, and connections to allowed origins.
+- **Frontend**: React 18+ via Vite, no routing, anchor-scroll navigation, 14 Vitest tests. CSP meta tag restricts scripts, fonts, and connections to allowed origins. Google Analytics via VITE_GTM_ID env var (injected at build time, omitted in dev).
 - **Backend**: Python 3.12 Lambda behind API Gateway HTTP API (Lambda::Url blocked by org policy). Validates + hCaptcha verify + SES send. Origin validation (urlparse exact match), rate limiting (requestContext.sourceIp), restricted CORS, input length limits, CR/LF stripping. 26 pytest tests.
 - **Infrastructure**: CloudFormation — S3 bucket, CloudFront distribution with OAC + inline policy resources, API Gateway HTTP API (5 resources), Lambda function, IAM roles, SES configuration
 - **DNS**: Route53 hosted zone with ALIAS A records for root + www, SES domain verification, SPF, DKIM (3 keys), DMARC (p=none), MAIL FROM domain

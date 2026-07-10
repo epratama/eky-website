@@ -50,6 +50,8 @@
 > - `App`: `<Footer>` passes `role={resume.title}` and `github={resume.github}`
 > - `useScrollReveal`: hardcoded threshold/rootMargin instead of destructured defaults, `useEffect` depends on `[]`
 > - **New**: `BuildShowcase.jsx` — section `#showcase` (number `"07"`), "Want to know how this site was built?" + CTA button linking to `resume.repo` on GitHub
+> - `index.html`: CSP updated to allow GTM/GA domains, Google Analytics snippet added (gated behind `VITE_GTM_ID` env var — injected at build time, omitted in dev)
+> - `.env.example`: added `VITE_GTM_ID=` (empty default)
 > 
 > ### Data divergences (Task 2)
 > - `resume.json`: added `github` field, added `repo` field (`"https://github.com/epratama/eky-website"`), second experience entry (Internetrix internship), `title` → `"Technical Lead & Senior Software Engineer"`, summary updated

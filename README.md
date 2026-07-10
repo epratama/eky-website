@@ -159,6 +159,7 @@ Each phase maps to a Superpowers or community skill:
 | **IaC** | CloudFormation (14 resources, 6 parameters) |
 | **Testing** | Vitest + testing-library (16), pytest (29), bash mocks (30) |
 | **Design** | Neo-brutalism (ui-ux-pro-max design system) |
+| **Analytics** | Google Analytics 4 (GTM gtag.js, injected via `VITE_GTM_ID` at build time) |
 | **CI/CD** | `deploy.sh` — 1 command: build → deploy → invalidate |
 
 ---

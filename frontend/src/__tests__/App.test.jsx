@@ -60,12 +60,14 @@ describe('App', () => {
     expect(screen.getByText('See the code on GitHub →')).toBeInTheDocument()
   })
 
-  it('CSP allows favicon data URI, hCaptcha, and API Gateway connections', () => {
+  it('CSP allows favicon data URI, hCaptcha, API Gateway, and Google Analytics connections', () => {
     const csp = getCspMetaContent()
     expect(csp).toContain("img-src 'self' data:")
     expect(csp).toContain('connect-src')
     expect(csp).toContain('*.hcaptcha.com')
     expect(csp).toContain('*.amazonaws.com')
+    expect(csp).toContain('googletagmanager.com')
+    expect(csp).toContain('google-analytics.com')
     expect(csp).toContain("frame-src")
     expect(csp).toContain("form-action 'self'")
   })
