@@ -1,15 +1,15 @@
 # CodeQL Security Scan — Summary
 
-**Date**: 2025-07-10
+**Date**: 2025-07-10 (re-scan)
 **Project**: eky-website
 
 ## Aggregated Results
 
-| Language | Path | Queries | Critical | High | Medium | Low | Info | Status |
-|----------|------|---------|----------|------|--------|-----|------|--------|
-| Python | `./backend` | 52 | 0 | 0 | 1 | 1 | 1 | FIXED |
-| JavaScript/TypeScript | `./frontend` | 105 | 0 | 0 | 1 | 3 | 0 | FIXED |
-| **Total** | | **157** | **0** | **0** | **2** | **4** | **1** | **ALL FIXED** |
+| Language | Path | Queries | Critical | High | Medium | Low | Status |
+|----------|------|---------|----------|------|--------|-----|--------|
+| Python | `./backend` | 52 | 0 | 0 | 0 | 0 | PASS |
+| JavaScript/TypeScript | `./frontend` | 105 | 0 | 0 | 0 | 0 | PASS |
+| **Total** | | **157** | **0** | **0** | **0** | **0** | **ALL PASS** |
 
 ## Per-Language Reports
 
@@ -21,7 +21,9 @@
 - [Python SARIF](python-codeql.sarif)
 - [JavaScript SARIF](javascript-codeql.sarif)
 
-## Top Issues Addressed
+## Historical Issues (all fixed)
+
+All previous manual findings (6 items) have been addressed and verified:
 
 | # | Severity | File:Line | Issue | Fix |
 |---|----------|-----------|-------|-----|

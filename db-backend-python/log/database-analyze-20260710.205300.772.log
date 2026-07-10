@@ -1,0 +1,13 @@
+[2026-07-10 20:53:00] This is codeql database analyze db-backend-python --format=sarif-latest --sarif-category=python --output=/tmp/python-backend-results.sarif codeql/python-queries:codeql-suites/python-security-extended.qls
+[2026-07-10 20:53:00] Log file was started late.
+[2026-07-10 20:53:00] [PROGRESS] database analyze> Running queries.
+[2026-07-10 20:53:00] Running plumbing command: codeql database run-queries --evaluator-log-level=5 --warnings=show --qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml --dynamic-join-order-mode=none --no-rerun --interpret-passthrough=null,--format=sarif-latest,-o=/tmp/python-backend-results.sarif,--max-paths=4,--csv-location-format=line-column,--sarif-category=python,--print-diagnostics-summary,--print-metrics-summary,--qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml,--,/Users/epratama/Sites/opencode/website-resume/db-backend-python,codeql/python-queries:codeql-suites/python-security-extended.qls -- /Users/epratama/Sites/opencode/website-resume/db-backend-python codeql/python-queries:codeql-suites/python-security-extended.qls
+[2026-07-10 20:53:00] Calling plumbing command: codeql resolve ram --dataset=/Users/epratama/Sites/opencode/website-resume/db-backend-python/db-python --format=json
+[2026-07-10 20:53:00] Plumbing command codeql resolve ram completed:
+                      [
+                        "-J-Xmx2612M",
+                        "--off-heap-ram=2756"
+                      ]
+[2026-07-10 20:53:00] Chaining via /var/folders/6_/zmgcs5nx51l3sb58d30_0lsr0000gn/T/codeql.XXXXXXXX.OSRRXZ6ZPq to plumbing: execute queries -J-Xmx2612M --off-heap-ram=2756 --verbosity=progress --logdir=/Users/epratama/Sites/opencode/website-resume/db-backend-python/log --evaluator-log-level=5 --warnings=show --qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml --dynamic-join-order-mode=none --no-rerun --interpret-passthrough=null,--format=sarif-latest,-o=/tmp/python-backend-results.sarif,--max-paths=4,--csv-location-format=line-column,--sarif-category=python,--print-diagnostics-summary,--print-metrics-summary,--qlconfig-file=/Users/epratama/Sites/opencode/website-resume/qlconfig.yml,--,/Users/epratama/Sites/opencode/website-resume/db-backend-python,codeql/python-queries:codeql-suites/python-security-extended.qls --output=/Users/epratama/Sites/opencode/website-resume/db-backend-python/results -- /Users/epratama/Sites/opencode/website-resume/db-backend-python/db-python codeql/python-queries:codeql-suites/python-security-extended.qls
+[2026-07-10 20:53:00] Plumbing command codeql database run-queries completed with status 70.
+[2026-07-10 20:53:00] Exiting with code 70

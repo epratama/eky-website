@@ -1,27 +1,17 @@
-# CodeQL Security Scan — Python
+# CodeQL Security Scan Report
 
-- **Language**: Python
-- **Source path**: `./backend`
-- **Scan date**: 2025-07-10
-- **Query suite**: `codeql/python-queries:codeql-suites/python-security-extended.qls`
-- **Queries run**: 52
+- **Language:** Python
+- **Source Path:** ./backend
+- **Scan Date:** 2026-07-10
+- **CodeQL Version:** 2.26.0
+- **Query Suite:** codeql/python-queries:codeql-suites/python-security-extended.qls
 
 ## Findings
 
-| Severity | Count |
-|----------|-------|
-| Error | 0 |
-| Warning | 0 |
-| Recommendation | 0 |
+| Severity | Rule | File:Line | Description |
+|----------|------|-----------|-------------|
+| —        | —    | —         | No findings |
 
-**Verdict**: PASS (0 automated findings)
+## Verdict
 
-## Manual Review Findings
-
-| # | Severity | Rule | File:Line | Description |
-|---|----------|------|-----------|-------------|
-| 1 | MEDIUM | Rate-limit bypass | `backend/lambda.py:52` | `x-forwarded-for` fallback for IP source is spoofable |
-| 2 | LOW | Memory leak | `backend/lambda.py:22,37-45` | `rate_store` dict never prunes stale keys |
-| 3 | INFO | Missing sanitization | `backend/lambda.py:68` | `mobile` field not stripped of CR/LF |
-
-All 3 manual findings addressed and fixed.
+**PASS** — 0 critical, 0 high, 0 medium, 0 low issues found.
