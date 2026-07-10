@@ -89,7 +89,8 @@ export default function ContactForm() {
       setStatus('success')
     } catch (err) {
       setStatus('error')
-      setErrors({ form: err.message || 'Something went wrong. Please try again.' })
+      console.error('Contact form submission failed:', err)
+      setErrors({ form: 'Something went wrong. Please try again.' })
     } finally {
       if (window.hcaptcha && captchaWidgetId.current !== null) {
         window.hcaptcha.reset(captchaWidgetId.current)

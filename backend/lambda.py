@@ -86,6 +86,8 @@ def handler(event, context):
         return _error("Message too long", HTTPStatus.BAD_REQUEST)
 
     name = re.sub(r"[\r\n\t]", " ", name)
+    if mobile:
+        mobile = re.sub(r"[\r\n\t]", " ", mobile)
 
     if not (ALLOW_CAPTCHA_BYPASS and captcha_token == "dev-bypass"):
         data = urllib.parse.urlencode(
