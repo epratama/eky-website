@@ -29,22 +29,29 @@
 | 9 | LOW | CKV_AWS_173 | `ContactFormFunction` | `template.yaml:190` | Lambda environment variables not encrypted at rest |
 | 10 | MEDIUM | CKV_AWS_95 | `HttpApiStage` | `template.yaml:354` | API Gateway V2 Stage access logging not enabled |
 
-## Verdict: LOW RISK — 10 findings, all non-critical for portfolio use
+## Risk Acceptance
 
-Most failures are intentional or cost-optimized for a personal portfolio website:
+All 10 findings have been reviewed and are accepted as known risks. The
+following assessment was made against cost, complexity, and threat profile
+for a personal portfolio website:
 
-| Finding | Why Skipped |
-|---------|-------------|
-| S3 logging (CKV_AWS_18) | Static site — no sensitive content, zero access cost |
-| S3 block public policy (CKV_AWS_54) | Must be `false` for OAC bucket policy |
-| S3 versioning (CKV_AWS_21) | Static assets rebuilt on deploy, no version history needed |
-| CloudFront logging (CKV_AWS_86) | Portfolio traffic is minimal |
-| CloudFront TLS (CKV_AWS_174) | ACM cert enforces TLS v1.2+ automatically |
-| CloudFront WAF (CKV_AWS_68) | $5/month — overkill for portfolio, rate limiting handled by Lambda |
-| Lambda VPC (CKV_AWS_117) | Not needed — Lambda only calls SES + hCaptcha (public endpoints) |
-| Lambda DLQ (CKV_AWS_116) | Contact form failures are non-critical |
-| Lambda env encryption (CKV_AWS_173) | HCaptchaSecret already masked via `NoEcho: true` |
-| API Gateway logging (CKV_AWS_95) | Contact form traffic is minimal |
+| Finding | Decision | Rationale |
+|---------|----------|-----------|
+| CKV_AWS_18 (S3 logging) | **Accepted** | Static content only, no sensitive data. Enabling logging adds S3 storage costs with no material security benefit for this use case. |
+| CKV_AWS_54 (BlockPublicPolicy) | **Cannot remediate** | OAC requires `BlockPublicPolicy: false`. The bucket policy restricts access exclusively to the CloudFront OAC — S3 is not directly public. |
+| CKV_AWS_21 (S3 versioning) | **Accepted** | Assets are rebuilt and redeployed with each release. Versioning adds storage costs with minimal benefit for a CI/CD-driven static site. |
+| CKV_AWS_86 (CloudFront logging) | **Accepted** | Portfolio traffic volume is negligible. Standard CloudFront metrics provide sufficient observability without the overhead of log delivery and storage. |
+| CKV_AWS_174 (CloudFront TLS) | **Accepted** | The ACM certificate attached to the distribution enforces TLS v1.2+ automatically. Explicit protocol declaration is redundant in this configuration. |
+| CKV_AWS_68 (CloudFront WAF) | **Accepted (cost)** | At $5-8/month, WAF exceeds the threat profile of a personal portfolio. Rate limiting and bot protection are handled at the application layer (Lambda sliding window + hCaptcha). |
+| CKV_AWS_117 (Lambda VPC) | **Accepted (cost)** | A VPC with NAT Gateway costs $33+/month. The Lambda communicates only with public AWS APIs (SES, hCaptcha) — no private resources to protect. |
+| CKV_AWS_116 (Lambda DLQ) | **Accepted** | Contact form delivery is best-effort. SES sandbox limits and sender/receiver verification provide upstream guarantees. DLQ adds cost without resolving the root failure mode (SES rejection). |
+| CKV_AWS_173 (Lambda env encryption) | **Accepted** | The sole sensitive variable (`HCaptchaSecret`) is declared with `NoEcho: true` in CloudFormation and masked in all API responses. A customer-managed KMS key adds $1/month and operational complexity disproportionate to protection gained. |
+| CKV_AWS_95 (API Gateway logging) | **Accepted** | Contact form API traffic is minimal. Application-level error handling (structured HTTP responses) provides sufficient debugging context without additional CloudWatch log costs. |
+
+**Conclusion**: No remediation is required. The 10 findings represent deliberate
+trade-offs between security controls and operational cost for a portfolio website
+with negligible traffic and no sensitive data. All 22 critical checks (IAM least
+privilege, S3 encryption, no hardcoded secrets, HTTPS enforcement) passed.
 
 ## Passed Checks (22)
 

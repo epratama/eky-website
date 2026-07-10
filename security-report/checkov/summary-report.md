@@ -26,4 +26,4 @@
 
 ## Verdict: PASS (0 critical/high)
 
-All 10 findings are non-critical for a personal portfolio website. The 22 passed checks confirm IAM least privilege, S3 encryption, Lambda runtime not deprecated, no hardcoded secrets, no open CORS, and HTTPS-only CloudFront.
+All 10 findings reviewed and accepted as known risks per cost-benefit analysis — no remediation required. See [per-target report](infrastructure-cloudformation-report.md#risk-acceptance) for formal risk acceptance rationale. The 22 passed checks confirm IAM least privilege, S3 encryption, Lambda runtime not deprecated, no hardcoded secrets, no open CORS, and HTTPS-only CloudFront.
