@@ -41,9 +41,10 @@ command builds, provisions infrastructure, uploads, and configures DNS.
 | Layer | Mechanism |
 |---|---|
 | **Bot protection** | hCaptcha (invisible, server-side verification) |
-| **Origin restriction** | Lambda rejects requests from unknown domains (403) |
-| **Rate limiting** | 3 requests/minute/IP — sliding window (429) |
+| **Origin restriction** | Lambda rejects requests from unknown domains using `urlparse` exact matching (403) |
+| **Rate limiting** | 3 requests/minute/IP from `requestContext.sourceIp` — sliding window (429) |
 | **CORS** | Restricted to domain (not `*`) |
+| **CSP** | Content-Security-Policy: script-src, connect-src, frame-src restricted to hCaptcha + API Gateway |
 | **Concurrency** | Lambda reserved concurrency: 5 |
 | **SPF** | `v=spf1 include:_spf.google.com include:amazonses.com ~all` |
 | **DKIM** | 3 signing keys via Amazon SES |
@@ -109,28 +110,38 @@ Identified technical friction points during development and built automated guar
 ## Development Lifecycle
 
 ```
-  ┌──────────────┐   ┌─────────────┐   ┌──────────────┐   ┌──────────────┐
-  │ brainstorming │──▶│ writing-plans│──▶│ TDD: tests   │──▶│ subagent-    │
-  │  design spec  │   │ 20-task plan │   │ written FIRST │   │ driven dev   │
-  └──────────────┘   └─────────────┘   └──────────────┘   └──────┬───────┘
-                                                                  │
-                                                                  ▼
-  ┌──────────────┐   ┌─────────────┐   ┌──────────────┐   ┌──────────────┐
-  │ codeql-      │◀──│ verification │◀──│ systematic-  │◀──│ deploy.sh    │
-  │ security-scan│   │-before-done │   │ debugging    │   │ 1-command CI │
-  └──────┬───────┘   └─────────────┘   └──────────────┘   └──────────────┘
-         │
-         ▼
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │                  LOOP: fix → TDD → review → audit → repeat          │
-  └──────────────────────────────────────────────────────────────────────┘
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│brainstorm│─▶│ writing- │─▶│   TDD    │─▶│ subagent │─▶│  code    │
+│  spec    │  │  plans   │  │tests 1st │  │ dispatch │  │  review  │
+└──────────┘  └──────────┘  └──────────┘  └────┬─────┘  └────┬─────┘
+                                               │              │
+              ┌────────────────────────────────┘              │
+              ▼                                               ▼
+       ┌──────────┐                                   ┌──────────┐
+       │ deploy.sh│◀──────────────────────────────────│ browser  │
+       │ 1-cmd CI │                                   │  test    │
+       └────┬─────┘                                   │(Playwrgt)│
+            │                                         └──────────┘
+            ▼
+┌──────────┐  ┌──────────┐  ┌──────────┐
+│systematic│─▶│verification│─▶│codeql-   │
+│debugging │  │-before-done│  │security  │
+└────┬─────┘  └──────────┘  └────┬─────┘
+     │                           │
+     └─────────┬─────────────────┘
+               ▼
+┌────────────────────────────────────────────┐
+│        LOOP: fix → TDD → review → audit    │
+│        repeat until zero issues            │
+└────────────────────────────────────────────┘
 ```
 
-Each phase has a corresponding skill invoked at the right time:
-**brainstorming** (design) → **writing-plans** (breakdown) → **TDD** (write tests first) →
-**subagent-driven-development** (parallel execution) → **systematic-debugging** (diagnose failures) →
-**verification-before-completion** (quality gate) → **codeql-security-scan** (audit findings) →
-loop until zero issues.
+Each phase maps to a Superpowers or community skill:
+**brainstorming** (design) → **writing-plans** (breakdown) → **TDD** (tests first) →
+**subagent-driven-development** (parallel execution) → **requesting/receiving-code-review** →
+**Playwright MCP** (automated browser testing) → **deploy.sh** (1-command CI) →
+**systematic-debugging** (diagnose failures) → **verification-before-completion** (quality gate) →
+**codeql-security-scan** (audit findings) → loop until zero issues.
 
 ---
 
@@ -166,6 +177,7 @@ loop until zero issues.
 | **Quality gate** | `verification-before-completion` | Superpowers | Ran all 69 tests + lint before every completion claim |
 | **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
 | **Code review response** | `receiving-code-review` | Superpowers | Security audit feedback: dev-bypass gating, CSP hardening, error message sanitization |
+| **Browser testing** | `Playwright MCP` | OpenCode | Automated end-to-end browser testing of contact form and CSP |
 | **Process artifacts** | `docs/superpowers/specs/` + `docs/superpowers/plans/` | — | Full lifecycle from design spec to implementation plan — see [Development Artifacts](#development-artifacts) |
 
 ---
