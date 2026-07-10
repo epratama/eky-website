@@ -21,12 +21,12 @@ User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → 
                                     CORS restricted to domain
 ```
 
-- **Frontend**: React 18+ via Vite, no routing, anchor-scroll navigation, 12 Vitest tests
-- **Backend**: Python 3.12 Lambda behind API Gateway HTTP API (Lambda::Url blocked by org policy). Validates + hCaptcha verify + SES send. Origin validation, rate limiting, restricted CORS. 13 pytest tests.
-- **Infrastructure**: CloudFormation — S3 bucket, CloudFront distribution with OAC, API Gateway HTTP API, Lambda function, IAM roles, SES configuration
+- **Frontend**: React 18+ via Vite, no routing, anchor-scroll navigation, 14 Vitest tests. CSP meta tag restricts scripts, fonts, and connections to allowed origins.
+- **Backend**: Python 3.12 Lambda behind API Gateway HTTP API (Lambda::Url blocked by org policy). Validates + hCaptcha verify + SES send. Origin validation (urlparse exact match), rate limiting (requestContext.sourceIp), restricted CORS, input length limits, CR/LF stripping. 26 pytest tests.
+- **Infrastructure**: CloudFormation — S3 bucket, CloudFront distribution with OAC + inline policy resources, API Gateway HTTP API (5 resources), Lambda function, IAM roles, SES configuration
 - **DNS**: Route53 hosted zone with ALIAS A records for root + www, SES domain verification, SPF, DKIM (3 keys), DMARC (p=none), MAIL FROM domain
 - **Resume data**: Static JSON file in frontend (single source of truth, easy to update)
-- **Testing**: 55 tests total across 4 suites (12 frontend + 13 Lambda + 13 deploy + 17 CF template)
+- **Testing**: 70 tests total across 4 suites (14 frontend + 26 Lambda + 13 deploy + 17 CF template)
 
 ## Visual Design System
 
@@ -51,7 +51,7 @@ User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → 
 
 | Role | Font | Weights |
 |---|---|---|
-| Headings | Archivo | 700, 800 |
+| Headings | Archivo | 600, 700, 800 |
 | Body | Space Grotesk | 400, 500, 600 |
 | Monospace accents | JetBrains Mono | 400, 500 |
 
@@ -132,9 +132,15 @@ User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → 
 - Validation: instant red border + bold error text (no animation)
 - Submit: black button, inverts on hover, shows `Loader2` spinner + "Sending..." on loading
 - Success: form replaced by bold confirmation message
-- Error: error state shown inline, user can retry
+- Error: error state shown inline, user can retry; generic message only (no internal `err.message` leaked)
 
-### 8. Footer
+### 8. Build Showcase
+- Section number "07" — positioned after contact form, before footer
+- Bordered card with accent left bar, scroll-reveal animation
+- "Want to know how this site was built?" headline
+- GitHub link button to source code repository (epratama/eky-website)
+
+### 9. Footer
 - Dark background (`#18181B`) with white text
 - Name, role title, LinkedIn + GitHub icon links (matched pair)
 - "Top" button scrolls to `#home`
@@ -168,12 +174,13 @@ User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → 
 
 | Layer | Implementation |
 |---|---|
-| **Origin check** | `ALLOWED_ORIGIN` env var — rejects requests from other domains (403 Forbidden) |
-| **Rate limiting** | 3 requests per minute per IP, sliding window (429 Too Many Requests) |
+| **Origin check** | `ALLOWED_ORIGIN` env var — `urlparse` exact scheme+netloc match, rejects subdomain bypass (403 Forbidden). Removes `www.` prefix for comparison. |
+| **Rate limiting** | 3 requests per minute per IP, sliding window. Uses `requestContext.sourceIp` (not spoofable `x-forwarded-for` header). |
 | **CORS** | `Access-Control-Allow-Origin` restricted to `ALLOWED_ORIGIN` (not `*`) |
-| **hCaptcha** | Server-side token verification via hcaptcha.com |
-| **Input validation** | Name/email/message required, email format regex |
-| **HTML escaping** | `_esc()` sanitizes `& < > " '` before email rendering |
+| **hCaptcha** | Server-side token verification via hcaptcha.com. `ALLOW_CAPTCHA_BYPASS` env var gates dev-bypass (default: `"false"` in production). |
+| **Input validation** | Name/email/message required, email format regex. Length limits: name ≤200, email ≤254, mobile ≤50, message ≤10000. CR/LF stripped from name and mobile. |
+| **HTML escaping** | `_esc()` sanitizes `& < > " '` (5 chars) before email rendering |
+| **Error sanitization** | Client receives generic "Something went wrong" — internal errors logged via `console.error`, not exposed |
 | **Concurrency** | Lambda reserved concurrency: 5 |
 
 ### Email
@@ -184,16 +191,17 @@ User → hCaptcha → API Gateway HTTP API → Lambda (Python 3.12) → SES → 
 - **Authentication**: SPF (`include:amazonses.com + _spf.google.com`), DKIM (3 keys), DMARC (`p=none`)
 
 ### Flow
-1. Rate limit check (sliding window, 3/min/IP)
-2. Origin check against `ALLOWED_ORIGIN`
+1. Rate limit check (sliding window, 3/min/IP from `requestContext.sourceIp`)
+2. Origin check against `ALLOWED_ORIGIN` using `urlparse` exact matching
 3. Parse and validate JSON body
-4. Validate required fields + email format
-5. Verify hCaptcha token via `https://hcaptcha.com/siteverify`
+4. Validate required fields + email format + length limits
+5. Strip CR/LF from name and mobile
+6. Verify hCaptcha token via `https://hcaptcha.com/siteverify` (unless `ALLOW_CAPTCHA_BYPASS=true` and token is `dev-bypass`)
 6. On success: send email via SES to configured recipient
 7. Return `{ success: true }` or `{ error: "message" }`
 
 ### Errors
-- 400: validation failure or hCaptcha rejection
+- 400: validation failure, length limit exceeded, or hCaptcha rejection
 - 403: origin check failure
 - 429: rate limit exceeded
 - 500: SES send failure

@@ -10,6 +10,21 @@
 > - CloudFront managed policy IDs → **inline CachePolicy/OriginRequestPolicy/ResponseHeadersPolicy** resources (policy IDs differ by region)
 > - Added SES domain setup, SPF/DKIM/DMARC automation, and Route53 ALIAS auto-configuration
 > 
+> ### Security hardening (post-audit, not in original plan)
+> - `index.html`: added CSP `Content-Security-Policy` meta tag (hCaptcha + API Gateway allowed)
+> - CodeQL security scan: 157 queries across Python + JavaScript, 0 automated findings
+> - `ContactForm`: `err.message` sanitized → `console.error(err)` + generic "Something went wrong"
+> - `ContactForm`: dev-bypass token only sent in `import.meta.env.DEV` mode
+> - `ContactForm`: hCaptcha test sitekey fallback (`|| '10000000-ffff...'`) removed
+> - `Education`: `cert.url.startsWith('https://')` validation before rendering links
+> - Lambda: origin check upgraded to `urlparse` exact scheme+netloc matching (rejects subdomain bypass)
+> - Lambda: rate limit uses `requestContext.sourceIp` (not spoofable `x-forwarded-for`)
+> - Lambda: `ALLOW_CAPTCHA_BYPASS` env var gates dev-bypass (default `"false"` in production)
+> - Lambda: input length limits added (name ≤200, email ≤254, mobile ≤50, message ≤10000)
+> - Lambda: mobile CR/LF stripped (`re.sub(r"[\r\n\t]", " ", mobile)`)
+> - Template: `ses:SendRawEmail` removed from IAM policy (least privilege)
+> - Template: `ALLOW_CAPTCHA_BYPASS` env var added (default `"false"`)
+> 
 > ### Backend divergences (Task 16, 17)
 > - `import requests` → `urllib.request` (stdlib, no extra dep) — removed `requests` from `requirements.txt`
 > - Added `_rate_limit()` (3 req/min/IP sliding window) + `_check_origin()` (rejects unknown domains)
@@ -34,16 +49,18 @@
 > - `ContactForm`: uses `formRef = useRef(form); formRef.current = form` pattern to avoid stale closure
 > - `App`: `<Footer>` passes `role={resume.title}` and `github={resume.github}`
 > - `useScrollReveal`: hardcoded threshold/rootMargin instead of destructured defaults, `useEffect` depends on `[]`
+> - **New**: `BuildShowcase.jsx` — section `#showcase` (number `"07"`), "Want to know how this site was built?" + CTA button linking to `resume.repo` on GitHub
 > 
 > ### Data divergences (Task 2)
-> - `resume.json`: added `github` field, second experience entry (Internetrix internship), `title` → `"Technical Lead & Senior Software Engineer"`, summary updated
+> - `resume.json`: added `github` field, added `repo` field (`"https://github.com/epratama/eky-website"`), second experience entry (Internetrix internship), `title` → `"Technical Lead & Senior Software Engineer"`, summary updated
 > - `index.html`: title/description updated to "Technical Lead & Senior Software Engineer", inline SVG favicon added
 > - `package.json`: added `vitest`, `jsdom`, `@testing-library/*` devDeps + `"test": "vitest run"` script
 > 
 > ### Testing (not in original plan)
-> - Added 12 Vitest frontend tests (App, ContactForm, useScrollReveal)
-> - Added 13 pytest Lambda tests (origin, rate limit, CORS, validation, escaping)
+> - Added 14 Vitest frontend tests (App: 7, ContactForm: 4, useScrollReveal: 3)
+> - Added 26 pytest Lambda tests (origin, rate limit, CORS, validation, escaping, CR/LF, length limits, bypass gating)
 > - Added 13 Bash deploy tests + 17 CF template validation tests
+> - Total: 70 tests (26 backend + 14 frontend + 13 deploy + 17 template)
 > - See [Product Feedback Loop](../README.md#product-feedback-loop) for friction-driven changes
 
 **Goal:** Build a single-page neo-brutalist resume website for Eky Pratama with a React frontend hosted on S3/CloudFront and a Python Lambda contact form backend, all deployed via CloudFormation.
