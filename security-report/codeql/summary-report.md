@@ -32,4 +32,4 @@
 | 5 | LOW | `Education.jsx:62-63` | Unvalidated URL rendering | Added `startsWith('https://')` check |
 | 6 | LOW | `lambda.py:22,37-45` | `rate_store` unbounded growth | Documented limitation, acceptable for warm-Lambda |
 
-See [full audit report](../2025-07-09-security-audit.md) for complete details including fix history, TDD coverage, and re-audit results.
+See [full audit report](2025-07-09-security-audit.md) for complete details including fix history, TDD coverage, and re-audit results.
