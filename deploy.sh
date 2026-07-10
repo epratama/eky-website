@@ -383,7 +383,11 @@ echo "CDN:      $DIST_DOMAIN"
 echo ""
 echo "=== Building ==="
 cd "$SCRIPT_DIR/frontend"
-VITE_LAMBDA_URL="$LAMBDA_URL" VITE_HCAPTCHA_SITEKEY="$HCAPTCHA_SITEKEY"${GTM_ID:+ VITE_GTM_ID="$GTM_ID"} npm run build
+if [ -n "$GTM_ID" ]; then
+  VITE_GTM_ID="$GTM_ID" VITE_LAMBDA_URL="$LAMBDA_URL" VITE_HCAPTCHA_SITEKEY="$HCAPTCHA_SITEKEY" npm run build
+else
+  VITE_LAMBDA_URL="$LAMBDA_URL" VITE_HCAPTCHA_SITEKEY="$HCAPTCHA_SITEKEY" npm run build
+fi
 cd "$SCRIPT_DIR"
 
 # Upload
