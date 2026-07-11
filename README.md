@@ -2,7 +2,7 @@
 
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
 command builds, provisions infrastructure, uploads, and configures DNS.
-74 tests across 4 suites. 14 AWS resources managed via CloudFormation.
+78 tests across 4 suites. 14 AWS resources + Upstash Redis managed via CloudFormation.
 SEO-optimized with OG/Twitter Cards, JSON-LD structured data for AI
 visibility (AEO/GEO), and social sharing previews.
  Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills & Tools Used](#skills--tools-used)).
@@ -15,16 +15,13 @@ visibility (AEO/GEO), and social sharing previews.
 
 *Generated with [AWS Diagram-as-Code](https://github.com/awslabs/diagram-as-code)*.
 
-The diagram shows two runtime flows from the visitor's Browser (external, left,
-stacked above hCaptcha): static content via **Route53 → CloudFront**
-(TLS via ACM) → **S3** with OAC, and contact forms via **hCaptcha**
-(challenge round-trip) → **API Gateway → Lambda** (IAM least privilege —
-`ses:SendEmail` only) → **SES**. Email authentication records (SPF / DKIM /
-DMARC / MAIL FROM / ALIAS A) are rolled up into Route53, CloudFront's 5 security
-headers (HSTS, XFO, XCTO, RP, XSS) live on the ResponseHeadersPolicy child, and
-the recipient mailbox (Google Workspace) is configured via `RECIPIENT_EMAIL` —
-all documented in the [SES Domain Setup](#ses-domain-setup) and
-[Infrastructure as Code](#infrastructure-as-code) sections below.
+The diagram shows three runtime flows from the visitor's Browser: static
+content via **Route53 → CloudFront** (TLS via ACM) → **S3** with OAC,
+contact forms via **hCaptcha** → **API Gateway → Lambda** → **SES**,
+and rate limiting via **Lambda → Upstash Redis** over HTTPS REST.
+Email authentication records (SPF / DKIM / DMARC / MAIL FROM / ALIAS A)
+are rolled up into Route53, and CloudFront's 5 security headers (HSTS,
+XFO, XCTO, RP, XSS) live on the ResponseHeadersPolicy child.
 
 ### Infrastructure as Code
 
@@ -34,10 +31,11 @@ template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
 | Category | Resources | Details |
 |---|---|---|
 | **DNS** | Route53 | ALIAS A records (root + www), SES verification, SPF, DKIM, DMARC |
-| **CDN + Storage** | CloudFront, S3, ACM, CachePolicy, OriginRequestPolicy, ResponseHeadersPolicy, OAC | HTTPS/HTTP3, TLS via ACM (us-east-1), inline policies, security headers (XFO, HSTS, XCTO, RP) |
-| **Compute** | Lambda, IAM Role | Python 3.12, 5 concurrency, `ses:SendEmail` only |
+| **CDN + Storage** | CloudFront, S3, ACM, CachePolicy, OriginRequestPolicy, ResponseHeadersPolicy, OAC | HTTPS/HTTP3, TLS via ACM (us-east-1), security headers |
+| **Compute** | Lambda, IAM Role | Python 3.12, 5 concurrency, `ses:SendEmail` only, runtime 12s |
 | **API** | API Gateway HTTP API ×4 | AWS_PROXY integration, `POST /` route, `$default` stage |
-| **Parameters** | 6 CF params | Domain, Cert, hCaptcha (secret + site key), emails |
+| **Rate Limiting** | Upstash Redis | Serverless over HTTPS REST, `INCR` + `EXPIRE`, 1s timeout, fail open |
+| **Parameters** | 8 CF params | Domain, Cert, hCaptcha (secret + site key), emails, Upstash (URL + token) |
 
 ### Defense-in-depth
 
@@ -45,7 +43,9 @@ template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
 |---|---|
 | **Bot protection** | hCaptcha (invisible, server-side verification) |
 | **Origin restriction** | Lambda rejects requests from unknown domains using `urlparse` exact matching (403) |
-| **Rate limiting** | 3 requests/minute/IP from `requestContext.sourceIp` — sliding window (429) |
+| **Rate limiting** | 5 requests/5 min/IP via Upstash Redis REST API — fail open on Redis error (429) |
+| **Error codes** | `CF_RATE_LIMITED` / `CF_FORBIDDEN` / `CF_CAPTCHA_FAILED` / `CF_DELIVERY_FAILED` / `CF_VALIDATION` surfaced to frontend for user-friendly messaging, logged for debugging |
+| **Rate limit auth** | Bearer token in `Authorization` header, URL + token stored as NoEcho CF params and persisted in `.env` |
 | **CORS** | Restricted to domain (not `*`) |
 | **CSP** | Content-Security-Policy: script-src, connect-src, frame-src restricted to hCaptcha, API Gateway, Google Analytics |
 | **Concurrency** | Lambda reserved concurrency: 5 |
@@ -63,10 +63,11 @@ template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
 | **Frontend** | React 18, Vite 6, Tailwind CSS 3, Lucide React |
 | **Backend** | Python 3.12, AWS Lambda, API Gateway HTTP API |
 | **Email** | AWS SES (SPF + DKIM + DMARC) |
+| **Rate Limiting** | Upstash Redis (serverless, REST API, free tier), bearer token auth |
 | **Hosting** | S3 + CloudFront (HTTPS, HTTP/3, HTTP/2, compression) |
 | **DNS** | Route53 (ALIAS A, SPF TXT, DKIM CNAMEs, DMARC TXT, SES verification TXT, MAIL FROM MX) |
-| **IaC** | CloudFormation (14 resources, 6 parameters) |
-| **Testing** | Vitest + testing-library (15), pytest (29), bash mocks (13 deploy + 17 template) |
+| **IaC** | CloudFormation (14 resources, 8 parameters) |
+| **Testing** | Vitest + testing-library (15), pytest (33), bash mocks (13 deploy + 17 template) |
 | **Design** | Neo-brutalism (ui-ux-pro-max design system) |
 | **Analytics** | Google Analytics 4 (GTM gtag.js, injected via `VITE_GTM_ID` at build time) |
 | **SEO & Social** | OG Cards, Twitter Cards, JSON-LD Person schema, robots.txt, canonical URL |
@@ -137,6 +138,7 @@ Designed secure connections between AWS services:
 - CloudFront → S3: Origin Access Control (OAC) with bucket policy
 - API Gateway → Lambda: AWS_PROXY integration, payload format 2.0
 - Lambda → SES: custom domain sender with full SPF/DKIM/DMARC alignment
+- Lambda → Upstash Redis: REST API over HTTPS, `INCR` + `EXPIRE` rate keys, 1s call timeout, bearer token auth
 - SES domain verification, MAIL FROM MX, DKIM CNAMEs — all automated in deploy script
 
 ### Architectural Governance
@@ -159,6 +161,7 @@ Identified technical friction points during development and built automated guar
 | SES sandbox: emails silently fail if sender not verified | Automated `verify-email-identity` + polling loop in deploy script |
 | JMESPath bracket notation fails on `@` character | Switched to escaped dot notation |
 | CloudFront managed policy IDs differ by region | Replaced with inline `AWS::CloudFront::CachePolicy` resources |
+| NoEcho params can't be read from CloudFormation API | `.env` persistence pattern for secrets (Upstash URL/token, GTM ID) — sourced at script start, prompted once |
 
 ---
 
@@ -176,7 +179,7 @@ Identified technical friction points during development and built automated guar
 | **Skill invocation** | [`codeql-security-scan`](https://github.com/epratama/codeql-security-scan) | Community | Multi-language static analysis — 157 queries, 0 automated findings, 3 manual fixes ([report](security-report/codeql/2025-07-09-security-audit.md)) |
 | **Skill invocation** | [`checkov-iac-scan`](https://github.com/epratama/checkov-iac-scan) | Community | CloudFormation IaC audit — 22 passed, 0 critical/high, 10 informational ([report](security-report/checkov/summary-report.md)) |
 | **Bug diagnosis** | `systematic-debugging` | Superpowers | Debugged Lambda::Url block, DMARC alignment, JMESPath syntax, CF policy IDs, CSP hCaptcha blocking, template indentation crashes |
-| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 74 tests + lint before every completion claim |
+| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 78 tests + lint before every completion claim |
 | **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
 | **Code review response** | `receiving-code-review` | Superpowers | Security audit feedback: dev-bypass gating, CSP hardening, error message sanitization |
 | **Consortium audit** | `brainstorming` | Superpowers | 4-agent MoA audit (SEO/Security/Social/AEO) — validated design spec v1.1 before implementation |
@@ -192,11 +195,11 @@ Identified technical friction points during development and built automated guar
 
 | Suite | Language | Tests | Command |
 |---|---|---|---|
-| **Frontend components** | JSX (Vitest) | 15 | `cd frontend && npm test` |
-| **Lambda backend** | Python (pytest) | 29 | `cd backend && .venv/bin/pytest` |
+| **Frontend components** | JSX (Vitest) | 15 | `npm -C frontend test` |
+| **Lambda backend** | Python (pytest) | 33 | `python3 -m pytest backend/test_lambda.py -q` |
 | **Deploy script** | Bash (mocks) | 13 | `./test-deploy.sh` |
 | **CF template** | Bash (validation) | 17 | `./test-template.sh` |
-| **Total** | | **74** | |
+| **Total** | | **78** | |
 
 ### What the tests cover
 
@@ -207,9 +210,9 @@ Identified technical friction points during development and built automated guar
 | **Scroll reveal** | Returns `{ref, isVisible}`, `prefers-reduced-motion` → immediate |
 | **Experience** | Descending chronological order (current role before internship) |
 | **Lambda validation** | Name/email/message required, max lengths, mobile format + CR/LF stripping, email format, JSON decode error |
-| **Lambda security** | Origin exact-matching, rate limit (3/min then 429, requestContext.sourceIp), CORS restriction, HTML escaping, captcha bypass gated |
+| **Lambda security** | Origin exact-matching, rate limit (5/5min via Upstash Redis REST, 429), fail-open on Redis error, Upstash env var presence, `CF_` error codes on all responses |
 | **Deploy flow** | Stack check, SES verify/decline/auto-verify, cert detect (issued/pending/none), cert request, Route53 DNS (skip/update/non-Route53) |
-| **CF template** | Syntax validation, key resources present, 6 parameters, secrets marked `NoEcho` |
+| **CF template** | Syntax validation, key resources present, 8 parameters, secrets marked `NoEcho` |
 
 ---
 
@@ -227,6 +230,7 @@ the product.
 | [`seo-social-sharing`](docs/superpowers/specs/2025-07-11-seo-social-sharing-design.md) | OG/Twitter Cards, JSON-LD Person schema, AEO/GEO entity disambiguation (MoA-audited v1.1) |
 | [`robots-txt-fix`](docs/superpowers/specs/2026-07-11-robots-txt-fix-design.md) | AI crawler explicit Allow directives, Google-Extended opt-out resolution |
 | [`aws-architecture-diagram-v3`](docs/superpowers/specs/2026-07-11-aws-architecture-diagram-v3-design.md) | 11-node overlap-free L→R layout redesign |
+| [`rate-limit-redis`](docs/superpowers/specs/2026-07-11-rate-limit-redis-design.md) | Replace in-memory rate_store with Upstash Redis REST API (5/5min, fail open), `CF_` error codes |
 
 ### Implementation Plans
 
@@ -234,6 +238,7 @@ the product.
 |---|---|
 | [`resume-website`](docs/superpowers/plans/2025-07-09-resume-website.md) | Full-stack deployment: S3/CloudFront, Lambda contact form with hCaptcha, API Gateway, Route53 DNS, neo-brutalist CSS, 30 shell unit tests |
 | [`seo-social-sharing`](docs/superpowers/plans/2025-07-11-seo-social-sharing.md) | robots.txt, OG image generation, OG/Twitter/SEO meta tags, JSON-LD schema, security rescan, deploy |
+| [`rate-limit-redis`](docs/superpowers/plans/2026-07-11-rate-limit-redis.md) | Lambda code, CloudFormation template, deploy.sh prompts, 33 backend tests (TDD) |
 
 ### Security Reports
 
@@ -241,6 +246,8 @@ the product.
 |---|---|
 | [`codeql`](security-report/codeql/2025-07-09-security-audit.md) | Multi-language SAST: Python + JavaScript — 157 queries, 0 automated findings, 3 manual fixes verified |
 | [`checkov`](security-report/checkov/summary-report.md) | CloudFormation IaC scan — 22 checks passed, 0 critical/high misconfigurations |
+| [`codeql-2026`](security-report/codeql/summary-report.md) | Python + JavaScript — 0 critical/high/medium, 2 low false positives |
+| [`checkov-2026`](security-report/checkov/summary-report.md) | CloudFormation IaC scan — 22 passed, 10 failed (0 critical/high, all risk-accepted) |
 
 ---
 
@@ -257,7 +264,7 @@ Single command deploys everything:
 | Phase | What happens |
 |---|---|
 | **Pre-flight** | Checks `aws`, `jq`, `npm` installed. Queries CloudFormation for existing stack config. |
-| **Interactive prompts** | Sender/recipient emails (prefilled from stack if exists), hCaptcha secret (hidden input), Google Analytics ID (optional, leave empty to skip). |
+| **Interactive prompts** | Sender/recipient emails (prefilled from stack if exists), hCaptcha secret (hidden input), Upstash Redis URL + token (persisted to `.env`, prompted once), Google Analytics ID (optional, leave empty to skip). |
 | **SES email verification** | Checks if sender + recipient are verified in SES. If not: sends verification email, polls every 5s (up to 2.5 min) until confirmed. Declining aborts deploy. |
 | **ACM certificate** | Auto-searches for existing ISSUED cert in us-east-1. If found: reuses. If PENDING: shows DNS records and exits. If none: offers to request new, shows validation CNAMEs. |
 | **CloudFormation deploy** | Builds parameter overrides, runs `cloudformation deploy`. After deploy: verifies DomainName + CertificateArn were applied, warns if not. |

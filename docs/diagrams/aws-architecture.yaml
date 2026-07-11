@@ -18,12 +18,16 @@ Diagram:
       Children:
         - Browser
         - HCaptcha
+        - UpstashRedis
     Browser:
       Type: AWS::Diagram::Resource
       Title: "Browser"
     HCaptcha:
       Type: AWS::Diagram::Resource
       Title: "hCaptcha"
+    UpstashRedis:
+      Type: AWS::Diagram::Resource
+      Title: "Upstash Redis"
     AWSCloud:
       Type: AWS::Diagram::Cloud
       Preset: AWSCloudNoLogo
@@ -136,6 +140,16 @@ Diagram:
       TargetArrowHead:
         Type: Open
       Type: orthogonal
+    - Source: LambdaFunction
+      Target: UpstashRedis
+      SourcePosition: E
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        TargetLeft:
+          Title: "REST"
     - Source: CloudFrontDist
       SourcePosition: SE
       Target: S3

@@ -24,9 +24,25 @@ case "$2" in
       echo "mock: stack not found" >&2
       exit 1
     fi
-    echo "ok"
+    cat << JSONEOF
+{"Stacks":[{"Parameters":[
+  {"ParameterKey":"SenderEmail","ParameterValue":"${MOCK_SENDER}"},
+  {"ParameterKey":"RecipientEmail","ParameterValue":"${MOCK_RECIPIENT}"},
+  {"ParameterKey":"HCaptchaSiteKey","ParameterValue":"${MOCK_SITEKEY}"},
+  {"ParameterKey":"HCaptchaSecret","ParameterValue":"****"},
+  {"ParameterKey":"DomainName","ParameterValue":"${MOCK_DOMAIN}"},
+  {"ParameterKey":"CertificateArn","ParameterValue":"${MOCK_CERT}"},
+  {"ParameterKey":"UpstashRedisUrl","ParameterValue":"****"},
+  {"ParameterKey":"UpstashRedisToken","ParameterValue":"****"}
+],"Outputs":[
+  {"OutputKey":"S3Bucket","OutputValue":"${MOCK_S3}"},
+  {"OutputKey":"LambdaURL","OutputValue":"${MOCK_API}"},
+  {"OutputKey":"CloudFrontDistributionId","OutputValue":"${MOCK_DIST}"},
+  {"OutputKey":"WebsiteURL","OutputValue":"${MOCK_CDN}"}
+]}]}
+JSONEOF
     ;;
-  deploy|sync|cloudfront)
+  deploy|sync|cloudfront|update-stack|create-stack)
     echo "mock ok"
     ;;
   list-certificates)
@@ -36,7 +52,11 @@ case "$2" in
     echo ""
     ;;
   list-hosted-zones)
-    echo "$MOCK_ZONES"
+    if [ -n "$MOCK_ZONES_ID" ]; then
+      echo "{\"HostedZones\":[{\"Id\":\"/hostedzone/$MOCK_ZONES_ID\",\"Name\":\"$MOCK_ZONES_NAME.\",\"CallerReference\":\"x\",\"Config\":{\"PrivateZone\":false},\"ResourceRecordSetCount\":14}]}"
+    else
+      echo "{\"HostedZones\":[]}"
+    fi
     ;;
   list-resource-record-sets)
     if echo "$*" | grep -q "www"; then echo "$MOCK_WWW_DNS"; else echo "$MOCK_ROOT_DNS"; fi
@@ -69,25 +89,6 @@ esac
 MOCK
   chmod +x "$MOCK_DIR/aws"
 
-  cat > "$MOCK_DIR/jq" << 'MOCK'
-#!/bin/bash
-filter="${2:-$1}"
-cat > /dev/null
-case "$filter" in
-  *S3Bucket*)               echo "$MOCK_S3" ;;
-  *LambdaURL*)              echo "$MOCK_API" ;;
-  *CloudFrontDistributionId*) echo "$MOCK_DIST" ;;
-  *WebsiteURL*)             echo "$MOCK_CDN" ;;
-  *SenderEmail*)            echo "$MOCK_SENDER" ;;
-  *RecipientEmail*)         echo "$MOCK_RECIPIENT" ;;
-  *HCaptchaSiteKey*)        echo "$MOCK_SITEKEY" ;;
-  *DomainName*)             echo "$MOCK_DOMAIN" ;;
-  *CertificateArn*)         echo "$MOCK_CERT" ;;
-  *)                        echo "" ;;
-esac
-MOCK
-  chmod +x "$MOCK_DIR/jq"
-
   cat > "$MOCK_DIR/npm" << 'MOCK'
 #!/bin/bash
 exit 0
@@ -108,7 +109,8 @@ set_mock_defaults() {
   export MOCK_DOMAIN=""
   export MOCK_CERT=""
   export MOCK_CERT_LIST=""
-  export MOCK_ZONES=""
+  export MOCK_ZONES_ID=""
+  export MOCK_ZONES_NAME=""
   export MOCK_ROOT_DNS=""
   export MOCK_WWW_DNS=""
   export MOCK_SES_STATUS="Success"
@@ -246,7 +248,8 @@ echo "--- Route53 records already correct ---"
 setup_mock_env
 set_mock_defaults
 export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
-export MOCK_ZONES=$'/hostedzone/Z123\texample.com.'
+export MOCK_ZONES_ID="Z123"
+export MOCK_ZONES_NAME="example.com"
 export MOCK_DOMAIN="example.com"
 export MOCK_ROOT_DNS="test.cloudfront.net."
 export MOCK_WWW_DNS="test.cloudfront.net."
@@ -268,7 +271,8 @@ echo "--- Route53 records updated ---"
 setup_mock_env
 set_mock_defaults
 export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
-export MOCK_ZONES=$'/hostedzone/Z123\texample.com.'
+export MOCK_ZONES_ID="Z123"
+export MOCK_ZONES_NAME="example.com"
 export MOCK_DOMAIN="example.com"
 export MOCK_ROOT_DNS="old.cloudfront.net."
 export MOCK_WWW_DNS=""
@@ -290,7 +294,8 @@ echo "--- Non-Route53 domain ---"
 setup_mock_env
 set_mock_defaults
 export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
-export MOCK_ZONES=""
+export MOCK_ZONES_ID=""
+export MOCK_ZONES_NAME=""
 export MOCK_DOMAIN="example.com"
 if output=$(printf 's@t.com\nr@t.com\n\nexample.com\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
   if echo "$output" | grep -q "not found in Route53"; then
