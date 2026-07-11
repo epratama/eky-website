@@ -34,6 +34,7 @@ if aws cloudformation describe-stacks --stack-name "$STACK_NAME" > /dev/null 2>&
   EXISTING_DOMAIN=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="DomainName") | .ParameterValue' 2>/dev/null)
   EXISTING_CERT=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="CertificateArn") | .ParameterValue' 2>/dev/null)
   EXISTING_UPSTASH_URL=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="UpstashRedisUrl") | .ParameterValue' 2>/dev/null)
+  EXISTING_UPSTASH_TOKEN=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="UpstashRedisToken") | .ParameterValue' 2>/dev/null)
   echo "Stack '$STACK_NAME' exists. Current config:"
   echo "  Sender:     $EXISTING_SENDER"
   echo "  Recipient:  $EXISTING_RECIPIENT"
@@ -47,6 +48,8 @@ else
 fi
 
 # Gather parameters
+EXISTING_UPSTASH_URL="${EXISTING_UPSTASH_URL:-}"
+EXISTING_UPSTASH_TOKEN="${EXISTING_UPSTASH_TOKEN:-}"
 if [ "$STACK_EXISTS" = true ]; then
   read -p "Sender email [$EXISTING_SENDER]: " SENDER_EMAIL
   SENDER_EMAIL="${SENDER_EMAIL:-$EXISTING_SENDER}"
@@ -59,10 +62,18 @@ else
 fi
 read -s -p "hCaptcha secret (leave empty to keep existing): " HCAPTCHA_SECRET
 echo ""
-read -s -p "Upstash Redis URL (leave empty to keep existing): " UPSTASH_REDIS_URL
+if [ "$STACK_EXISTS" = true ] && [ -n "$EXISTING_UPSTASH_URL" ]; then
+  echo "Upstash Redis URL (leave empty to keep existing: $EXISTING_UPSTASH_URL)"
+fi
+read -s -p "Upstash Redis URL: " UPSTASH_REDIS_URL
 echo ""
-read -s -p "Upstash Redis token (leave empty to keep existing): " UPSTASH_REDIS_TOKEN
+UPSTASH_REDIS_URL="${UPSTASH_REDIS_URL:-$EXISTING_UPSTASH_URL}"
+if [ "$STACK_EXISTS" = true ] && [ -n "$EXISTING_UPSTASH_URL" ]; then
+  echo "Upstash Redis token (leave empty to keep existing)"
+fi
+read -s -p "Upstash Redis token: " UPSTASH_REDIS_TOKEN
 echo ""
+UPSTASH_REDIS_TOKEN="${UPSTASH_REDIS_TOKEN:-$EXISTING_UPSTASH_TOKEN}"
 if [ -t 0 ]; then
   read -p "Google Analytics ID (${GTM_ID:-}, leave empty to skip): " GTM_INPUT
   GTM_ID="${GTM_INPUT:-$GTM_ID}"
@@ -336,13 +347,9 @@ if [ -n "$HCAPTCHA_SECRET" ]; then
 fi
 if [ -n "$UPSTASH_REDIS_URL" ]; then
   PARAMS+=(ParameterKey=UpstashRedisUrl,ParameterValue="$UPSTASH_REDIS_URL")
-else
-  PARAMS+=(ParameterKey=UpstashRedisUrl,ParameterValue="")
 fi
 if [ -n "$UPSTASH_REDIS_TOKEN" ]; then
   PARAMS+=(ParameterKey=UpstashRedisToken,ParameterValue="$UPSTASH_REDIS_TOKEN")
-else
-  PARAMS+=(ParameterKey=UpstashRedisToken,ParameterValue="")
 fi
 
 # Validate domain + cert consistency
