@@ -45,6 +45,54 @@ template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
 
 ---
 
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 18, Vite 6, Tailwind CSS 3, Lucide React |
+| **Backend** | Python 3.12, AWS Lambda, API Gateway HTTP API |
+| **Email** | AWS SES (SPF + DKIM + DMARC) |
+| **Hosting** | S3 + CloudFront (HTTPS, HTTP/3, HTTP/2, compression) |
+| **DNS** | Route53 (ALIAS A, SPF TXT, DKIM CNAMEs, DMARC TXT, SES verification TXT, MAIL FROM MX) |
+| **IaC** | CloudFormation (14 resources, 6 parameters) |
+| **Testing** | Vitest + testing-library (15), pytest (29), bash mocks (13 deploy + 17 template) |
+| **Design** | Neo-brutalism (ui-ux-pro-max design system) |
+| **Analytics** | Google Analytics 4 (GTM gtag.js, injected via `VITE_GTM_ID` at build time) |
+| **CI/CD** | `deploy.sh` — 1 command: build → deploy → invalidate |
+
+---
+
+## Development Lifecycle
+
+```mermaid
+flowchart TD
+    A[brainstorming<br/>design spec] --> B[write plan<br/>20-task roadmap]
+    B --> C[TDD<br/>tests 1st]
+    C --> D[subagent dispatch<br/>parallel execution]
+    D --> E{code review}
+    E -->|fail| C
+    E -->|pass| F[deploy.sh<br/>1-cmd CI]
+    F --> G[Playwright<br/>browser test]
+    G --> H[verify gate<br/>quality check]
+    H --> I[systematic debug]
+    I --> J[codeql audit]
+    I --> K[checkov audit]
+    J --> L{zero issues?}
+    K --> L
+    L -->|no| C
+    L -->|yes| M[DONE]
+```
+
+**Code review is a gate**: fail → loop back to TDD. Pass → continue to deploy.
+Each phase maps to a Superpowers or community skill:
+**brainstorming** (design) → **writing-plans** (breakdown) → **TDD** (tests first) →
+**subagent-driven-development** (parallel execution) → **requesting/receiving-code-review** →
+**deploy.sh** (CI/CD) → **Playwright MCP** (browser testing) →
+**systematic-debugging** (diagnose failures) → **verification-before-completion** (quality gate) →
+**codeql-security-scan** (audit findings) + **checkov-iac-scan** (IaC audit) → loop until zero issues.
+
+---
+
 ## Methodology
 
 Built with **OpenCode** (AI coding agent) using the **Superpowers** skill system.
@@ -100,63 +148,6 @@ Identified technical friction points during development and built automated guar
 
 ---
 
-## Development Lifecycle
-
-```
-┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
-│brainstorm│─▶│  write   │─▶│   TDD    │─▶│ subagent │─▶│  code    │
-│  spec    │  │  plan    │  │tests 1st │  │ dispatch │  │  review  │
-└──────────┘  └──────────┘  └──────────┘  └──────────┘  └────┬─────┘
-                                                             │
-                                                           (pass)
-                                                             │
-┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-│ deploy.sh│─▶│  browser │─▶│  verify  │─▶│systematic│◀──────┘
-│ 1-cmd CI │  │  test    │  │  gate    │  │  debug   │
-└──────────┘  │(Playwrgt)│  └──────────┘  └────┬─────┘
-              └──────────┘                     │
-                                               ▼
-                                   ┌──────────┐  ┌──────────┐
-                                   │ codeql-  │  │ checkov- │
-                                   │ security │  │ iac-scan │
-                                   │  audit   │  │  audit   │
-                                   └────┬─────┘  └────┬─────┘
-                                        │             │
-                                        └──────┬──────┘
-                                               ▼
-                     ┌──────────────────────────────────────────────────┐
-                     │       LOOP: fix → TDD → review → deploy          │
-                     │       repeat until zero issues                   │
-                     └──────────────────────────────────────────────────┘
-```
-
-**Code review is a gate**: fail → loop back to TDD. Pass → continue to deploy.
-Each phase maps to a Superpowers or community skill:
-**brainstorming** (design) → **writing-plans** (breakdown) → **TDD** (tests first) →
-**subagent-driven-development** (parallel execution) → **requesting/receiving-code-review** →
-**deploy.sh** (CI/CD) → **Playwright MCP** (browser testing) →
-**systematic-debugging** (diagnose failures) → **verification-before-completion** (quality gate) →
-**codeql-security-scan** (audit findings) + **checkov-iac-scan** (IaC audit) → loop until zero issues.
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Frontend** | React 18, Vite 6, Tailwind CSS 3, Lucide React |
-| **Backend** | Python 3.12, AWS Lambda, API Gateway HTTP API |
-| **Email** | AWS SES (SPF + DKIM + DMARC) |
-| **Hosting** | S3 + CloudFront (HTTPS, HTTP/3, HTTP/2, compression) |
-| **DNS** | Route53 (ALIAS A, SPF TXT, DKIM CNAMEs, DMARC TXT, SES verification TXT, MAIL FROM MX) |
-| **IaC** | CloudFormation (14 resources, 6 parameters) |
-| **Testing** | Vitest + testing-library (15), pytest (29), bash mocks (30) |
-| **Design** | Neo-brutalism (ui-ux-pro-max design system) |
-| **Analytics** | Google Analytics 4 (GTM gtag.js, injected via `VITE_GTM_ID` at build time) |
-| **CI/CD** | `deploy.sh` — 1 command: build → deploy → invalidate |
-
----
-
 ## Skills & Tools Used
 
 | OpenCode Feature | Skill / Tool | Origin | How Used |
@@ -175,6 +166,7 @@ Each phase maps to a Superpowers or community skill:
 | **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
 | **Code review response** | `receiving-code-review` | Superpowers | Security audit feedback: dev-bypass gating, CSP hardening, error message sanitization |
 | **Browser testing** | `Playwright MCP` | OpenCode | Automated end-to-end browser testing of contact form and CSP |
+| **Diagram as code** | `awdsac-mcp-server` | AWS | Professional AWS architecture diagram with standard icons ([source](docs/diagrams/aws-architecture.yaml)) |
 | **Process artifacts** | `docs/superpowers/specs/` + `docs/superpowers/plans/` | — | Full lifecycle from design spec to implementation plan — see [Development Artifacts](#development-artifacts) |
 
 ---
