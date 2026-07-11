@@ -1,7 +1,7 @@
 # SEO, Social Sharing & AI Optimization Design
 
 **Date:** 2025-07-11
-**Status:** Design
+**Status:** Design (v1.1 — consortium-audited)
 
 ## Goal
 
@@ -39,6 +39,7 @@ Added to `index.html` `<head>`:
 <meta property="og:title" content="Eky Pratama — Technical Lead & Senior Software Engineer" />
 <meta property="og:description" content="Technical Lead & Senior Software Engineer with 15+ years of experience in web platforms, cloud architecture, and AI-assisted development. LinkedIn: linkedin.com/in/ekyputrapratama | GitHub: github.com/epratama" />
 <meta property="og:image" content="https://ekyputrapratama.com/og-image.png" />
+<meta property="og:image:secure_url" content="https://ekyputrapratama.com/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:type" content="image/png" />
@@ -53,6 +54,7 @@ Added to `index.html` `<head>`:
 <meta name="twitter:title" content="Eky Pratama — Technical Lead & Senior Software Engineer" />
 <meta name="twitter:description" content="Technical Lead & Senior Software Engineer with 15+ years of experience. LinkedIn: linkedin.com/in/ekyputrapratama | GitHub: github.com/epratama" />
 <meta name="twitter:image" content="https://ekyputrapratama.com/og-image.png" />
+<meta name="twitter:image:alt" content="Eky Pratama — EP monogram logo on dark background" />
 ```
 
 **CSP impact:** None. `img-src 'self'` covers the share image. OG/Twitter tags are `<meta>`, no script/style directive concern.
@@ -99,6 +101,10 @@ Added to `index.html` `<head>`:
   "jobTitle": "Technical Lead & Senior Software Engineer",
   "description": "Technical Lead & Senior Software Engineer with 15+ years of experience in web platforms, cloud architecture, and AI-assisted development. Based in North Sydney, Australia.",
   "url": "https://ekyputrapratama.com",
+  "mainEntityOfPage": {
+    "@type": "ProfilePage",
+    "@id": "https://ekyputrapratama.com/#profile"
+  },
   "image": "https://ekyputrapratama.com/og-image.png",
   "sameAs": [
     "https://linkedin.com/in/ekyputrapratama",
@@ -130,7 +136,23 @@ Added to `index.html` `<head>`:
   "homeLocation": {
     "@type": "Place",
     "name": "North Sydney, NSW, Australia"
-  }
+  },
+  "hasCredential": [
+    {
+      "@type": "EducationalOccupationalCredential",
+      "name": "Common Cyber Security Threats and Mitigation Strategies",
+      "recognizedBy": {
+        "@type": "Organization",
+        "name": "TAFE"
+      }
+    }
+  ],
+  "knowsLanguage": [
+    {
+      "@type": "Language",
+      "name": "English"
+    }
+  ]
 }
 </script>
 ```
@@ -141,12 +163,15 @@ Added to `index.html` `<head>`:
 
 | Field | Purpose for AI disambiguation |
 |---|---|
+| `mainEntityOfPage` | Declares the page IS about this entity via `ProfilePage`. Google uses this to validate entity-page alignment for Rich Results and AI Overviews |
 | `sameAs` | Merges Google Knowledge Graph entity across LinkedIn + GitHub. Single most important field — without it, AI models treat each platform's "Eky Pratama" as separate people |
 | `alternateName` | Catches variations ("Eky Putra Pratama" on LinkedIn vs "Eky Pratama" on GitHub) |
-| `alumniOf` | Links to known educational entity (UoW). Authoritative backlink for Knowledge Graph |
+| `alumniOf` | Links to known educational entity (UoW). .edu authoritative backlink for Knowledge Graph |
 | `worksFor` | Links to known organization (Swift Digital). Weighted heavily by AI for entity verification |
 | `knowsAbout` | Maps expertise domains. Google AI Overviews uses this for "who knows about X" retrieval-augmented generation queries |
 | `homeLocation` | Geographic disambiguation — separates from other "Eky Pratama" results in Indonesia/Malaysia |
+| `hasCredential` | Maps to Google's credential graph. Verified qualifications boost entity authority |
+| `knowsLanguage` | Linguistic + geographic signal. Combined with `homeLocation` creates consistent entity profile |
 
 ### 5. Skills Data Fix
 
@@ -198,3 +223,21 @@ Updated:
    - Facebook: [Sharing Debugger](https://developers.facebook.com/tools/debug/)
    - LinkedIn: [Post Inspector](https://www.linkedin.com/post-inspector/)
    - Twitter/X: [Card Validator](https://cards-dev.twitter.com/validator)
+
+## Audit Consortium (MoA)
+
+v1.1 amendments applied after 4-agent audit:
+
+| Agent | Round 1 | Round 2 | Key Findings |
+|---|---|---|---|
+| SEO Technical | PASS WITH NOTES | PASS | Missing `og:image:secure_url`, `twitter:image:alt`, `mainEntityOfPage`, `hasCredential`, `knowsLanguage` |
+| Security & Privacy | PASS WITH NOTES | PASS | JSON-LD CSP verification, no new PII or attack surface |
+| Social/OG Compliance | PASS WITH NOTES (1 HIGH) | PASS | `og:image:secure_url` for Facebook HTTPS, `twitter:image:alt` for accessibility, 1200x630 compromise dimension accepted |
+| AEO/GEO Strategy | PASS WITH NOTES | PASS | `mainEntityOfPage` (ProfilePage) critical for entity-page alignment; `hasCredential` + `knowsLanguage` added for credential graph and geo consistency |
+
+## Changelog
+
+| Version | Date | Changes |
+|---|---|---|
+| v1.0 | 2025-07-11 | Initial design: OG tags, Twitter Card, JSON-LD Person schema, SEO meta tags, robots.txt, resume.json skills fix |
+| v1.1 | 2025-07-11 | Consortium audit: added `og:image:secure_url`, `twitter:image:alt`, `mainEntityOfPage` (ProfilePage), `hasCredential` (TAFE cert), `knowsLanguage` (English) |
