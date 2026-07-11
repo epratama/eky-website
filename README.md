@@ -15,13 +15,16 @@ visibility (AEO/GEO), and social sharing previews.
 
 *Generated with [AWS Diagram-as-Code](https://github.com/awslabs/diagram-as-code)*.
 
-The diagram shows three runtime flows from the visitor's Browser: static
-content via **Route53 → CloudFront** (TLS via ACM) → **S3** with OAC,
-contact forms via **hCaptcha** → **API Gateway → Lambda** → **SES**,
-and rate limiting via **Lambda → Upstash Redis** over HTTPS REST.
+The diagram shows the visitor's Browser (external, left) with three
+outgoing connections: DNS lookup via **Route53**, HTTPS request to
+**CloudFront** (TLS via ACM, 5 security headers via ResponseHeadersPolicy)
+which reads from **S3** using Origin Access Control, and POST to
+**API Gateway → Lambda** → **SES** (for contact form submissions,
+with the hCaptcha challenge token obtained separately from the
+**hCaptcha** node). Lambda also calls **Upstash Redis** over HTTPS
+REST for rate limiting (5 requests / 5 min / IP, fail open on error).
 Email authentication records (SPF / DKIM / DMARC / MAIL FROM / ALIAS A)
-are rolled up into Route53, and CloudFront's 5 security headers (HSTS,
-XFO, XCTO, RP, XSS) live on the ResponseHeadersPolicy child.
+are rolled up into Route53.
 
 ### Infrastructure as Code
 
@@ -33,7 +36,7 @@ template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
 | **DNS** | Route53 | ALIAS A records (root + www), SES verification, SPF, DKIM, DMARC |
 | **CDN + Storage** | CloudFront, S3, ACM, CachePolicy, OriginRequestPolicy, ResponseHeadersPolicy, OAC | HTTPS/HTTP3, TLS via ACM (us-east-1), security headers |
 | **Compute** | Lambda, IAM Role | Python 3.12, 5 concurrency, `ses:SendEmail` only, runtime 12s |
-| **API** | API Gateway HTTP API ×4 | AWS_PROXY integration, `POST /` route, `$default` stage |
+| **API** | API Gateway HTTP API | 1 gateway, 1 integration, `POST /` route, `$default` stage |
 | **Rate Limiting** | Upstash Redis | Serverless over HTTPS REST, `INCR` + `EXPIRE`, 1s timeout, fail open |
 | **Parameters** | 8 CF params | Domain, Cert, hCaptcha (secret + site key), emails, Upstash (URL + token) |
 
