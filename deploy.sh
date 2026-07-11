@@ -351,12 +351,8 @@ PARAMS+=(ParameterKey=RecipientEmail,ParameterValue="$RECIPIENT_EMAIL")
 if [ -n "$HCAPTCHA_SECRET" ]; then
   PARAMS+=(ParameterKey=HCaptchaSecret,ParameterValue="$HCAPTCHA_SECRET")
 fi
-if [ -n "$UPSTASH_REDIS_URL" ]; then
-  PARAMS+=(ParameterKey=UpstashRedisUrl,ParameterValue="$UPSTASH_REDIS_URL")
-fi
-if [ -n "$UPSTASH_REDIS_TOKEN" ]; then
-  PARAMS+=(ParameterKey=UpstashRedisToken,ParameterValue="$UPSTASH_REDIS_TOKEN")
-fi
+PARAMS+=(ParameterKey=UpstashRedisUrl,ParameterValue="$UPSTASH_REDIS_URL")
+PARAMS+=(ParameterKey=UpstashRedisToken,ParameterValue="$UPSTASH_REDIS_TOKEN")
 
 # Validate domain + cert consistency
 if [ -n "$DOMAIN_NAME" ] && [ -z "$CERT_ARN" ]; then
@@ -373,14 +369,34 @@ fi
 # Deploy/update stack
 echo ""
 echo "=== Deploying stack: $STACK_NAME ==="
-echo "DEBUG: UPSTASH_REDIS_URL length=${#UPSTASH_REDIS_URL}"
-echo "DEBUG: UPSTASH_REDIS_TOKEN length=${#UPSTASH_REDIS_TOKEN}"
-echo "DEBUG: PARAMS contains ${#PARAMS[@]} items"
-aws cloudformation deploy \
-  --template-file "$SCRIPT_DIR/infrastructure/template.yaml" \
-  --stack-name "$STACK_NAME" \
-  --parameter-overrides "${PARAMS[@]}" \
-  --capabilities CAPABILITY_IAM
+[ -n "$UPSTASH_REDIS_URL" ] && echo "Upstash URL: configured" || echo "Upstash URL: not set"
+if [ "$STACK_EXISTS" = true ]; then
+  UPDATE_OUTPUT=$(aws cloudformation update-stack \
+    --stack-name "$STACK_NAME" \
+    --template-body "file://$SCRIPT_DIR/infrastructure/template.yaml" \
+    --parameters "${PARAMS[@]}" \
+    --capabilities CAPABILITY_IAM \
+    --no-cli-pager 2>&1) || UPDATE_EXIT=$?
+  echo "$UPDATE_OUTPUT"
+  if echo "$UPDATE_OUTPUT" | grep -q "No updates are to be performed"; then
+    echo "No changes needed."
+  elif [ "${UPDATE_EXIT:-0}" -ne 0 ]; then
+    echo "Update failed, check output above."
+    exit 1
+  else
+    echo "Waiting for update..."
+    aws cloudformation wait stack-update-complete --stack-name "$STACK_NAME" --no-cli-pager 2>&1 || true
+  fi
+else
+  aws cloudformation create-stack \
+    --stack-name "$STACK_NAME" \
+    --template-body "file://$SCRIPT_DIR/infrastructure/template.yaml" \
+    --parameters "${PARAMS[@]}" \
+    --capabilities CAPABILITY_IAM \
+    --no-cli-pager 2>&1
+  echo "Waiting for creation..."
+  aws cloudformation wait stack-create-complete --stack-name "$STACK_NAME" --no-cli-pager 2>&1
+fi
 
 # Verify params applied
 if [ -n "$DOMAIN_NAME" ]; then
