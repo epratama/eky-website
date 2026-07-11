@@ -15,8 +15,8 @@ ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "")
 DOMAIN_NAME = os.environ.get("DOMAIN_NAME", "")
 ALLOW_CAPTCHA_BYPASS = os.environ.get("ALLOW_CAPTCHA_BYPASS", "") == "true"
 HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify"
-UPSTASH_REDIS_REST_URL = os.environ["UPSTASH_REDIS_REST_URL"]
-UPSTASH_REDIS_REST_TOKEN = os.environ["UPSTASH_REDIS_REST_TOKEN"]
+UPSTASH_REDIS_REST_URL = os.environ.get("UPSTASH_REDIS_REST_URL", "")
+UPSTASH_REDIS_REST_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
 RATE_MAX = 5
 RATE_WINDOW = 300
 
@@ -38,6 +38,8 @@ def _check_origin(headers):
 
 
 def _rate_limit(ip):
+    if not UPSTASH_REDIS_REST_URL:
+        return True
     key = f"rate:{ip}"
     try:
         incr_req = urllib.request.Request(

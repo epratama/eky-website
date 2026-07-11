@@ -178,6 +178,15 @@ def test_upstash_env_vars_set():
     assert os.environ.get("UPSTASH_REDIS_REST_TOKEN") == "test-token"
 
 
+def test_rate_limit_allows_when_upstash_not_configured():
+    prev = handler.UPSTASH_REDIS_REST_URL
+    handler.UPSTASH_REDIS_REST_URL = ""
+    with patch.object(handler.urllib.request, "urlopen") as mock_urlopen:
+        assert handler._rate_limit("1.2.3.4") is True
+        mock_urlopen.assert_not_called()
+    handler.UPSTASH_REDIS_REST_URL = prev
+
+
 def test_rate_limit_uses_request_context_ip_not_spoofed_header():
     event = api_event(
         {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},

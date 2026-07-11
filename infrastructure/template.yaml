@@ -25,10 +25,12 @@ Parameters:
     Description: SES verified email address for sending
   UpstashRedisUrl:
     Type: String
+    Default: ""
     NoEcho: true
     Description: Upstash Redis REST URL
   UpstashRedisToken:
     Type: String
+    Default: ""
     NoEcho: true
     Description: Upstash Redis REST token
 
@@ -229,8 +231,8 @@ Resources:
           DOMAIN_NAME = os.environ.get("DOMAIN_NAME", "")
           ALLOW_CAPTCHA_BYPASS = os.environ.get("ALLOW_CAPTCHA_BYPASS", "") == "true"
           HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify"
-          UPSTASH_REDIS_REST_URL = os.environ["UPSTASH_REDIS_REST_URL"]
-          UPSTASH_REDIS_REST_TOKEN = os.environ["UPSTASH_REDIS_REST_TOKEN"]
+          UPSTASH_REDIS_REST_URL = os.environ.get("UPSTASH_REDIS_REST_URL", "")
+          UPSTASH_REDIS_REST_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
           RATE_MAX = 5
           RATE_WINDOW = 300
           ses = boto3.client("ses")
@@ -249,6 +251,8 @@ Resources:
               return origin.scheme == allowed.scheme and origin_netloc == allowed_netloc
 
           def _rate_limit(ip):
+              if not UPSTASH_REDIS_REST_URL:
+                  return True
               key = f"rate:{ip}"
               try:
                   incr_req = urllib.request.Request(f"{UPSTASH_REDIS_REST_URL}/incr/{key}", method="POST", headers={"Authorization": f"Bearer {UPSTASH_REDIS_REST_TOKEN}"})
