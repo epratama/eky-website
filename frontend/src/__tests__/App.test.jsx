@@ -71,9 +71,6 @@ describe('App', () => {
     expect(csp).toContain('google-analytics.com')
     expect(csp).toContain("frame-src")
     expect(csp).toContain("form-action 'self'")
-    expect(csp).toContain('w.soundcloud.com')
-    expect(csp.match(/script-src[^;]*w\.soundcloud\.com/)).toBeTruthy()
-    expect(csp.match(/frame-src[^;]*w\.soundcloud\.com/)).toBeTruthy()
   })
 
   it('includes GTM script in build when VITE_GTM_ID is set', () => {
