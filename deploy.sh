@@ -350,6 +350,8 @@ PARAMS+=(ParameterKey=SenderEmail,ParameterValue="$SENDER_EMAIL")
 PARAMS+=(ParameterKey=RecipientEmail,ParameterValue="$RECIPIENT_EMAIL")
 if [ -n "$HCAPTCHA_SECRET" ]; then
   PARAMS+=(ParameterKey=HCaptchaSecret,ParameterValue="$HCAPTCHA_SECRET")
+else
+  PARAMS+=(ParameterKey=HCaptchaSecret,UsePreviousValue=true)
 fi
 PARAMS+=(ParameterKey=UpstashRedisUrl,ParameterValue="$UPSTASH_REDIS_URL")
 PARAMS+=(ParameterKey=UpstashRedisToken,ParameterValue="$UPSTASH_REDIS_TOKEN")
