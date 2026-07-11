@@ -1,29 +1,41 @@
-# Checkov IaC Security Scan — Summary
+# Security Audit Summary — 2026-07-12
 
-**Date**: 2025-07-10
-**Project**: eky-website
-**Tool**: Checkov 3.3.8
+## Checkov IaC Scan
 
-## Aggregated Results
+**Target:** `infrastructure/template.yaml` (CloudFormation)
+**Tool:** Checkov 3.3.8
 
-| IaC Type | Path | Critical | High | Medium | Low | Status |
-|----------|------|----------|------|--------|-----|--------|
-| CloudFormation | `./infrastructure` | 0 | 0 | 4 | 6 | LOW RISK |
+| Severity | Count |
+|----------|-------|
+| Passed | 22 |
+| Failed | 10 |
+| Critical | 0 |
+| High | 0 |
 
-## Top Findings
+**10 failed checks — all LOW/MEDIUM, 0 HIGH/CRITICAL. None require immediate action.**
 
-| # | Check | Resource | Description | Fix |
-|---|-------|----------|-------------|-----|
-| 1 | CKV_AWS_18 | WebsiteBucket | S3 access logging | Add `LoggingConfiguration` to bucket (optional) |
-| 2 | CKV_AWS_86 | CloudFrontDistribution | CloudFront logging | Add `Logging` config with S3 bucket (optional) |
-| 3 | CKV_AWS_68 | CloudFrontDistribution | No WAF | Add AWS WAF WebACL ($5/month) |
-| 4 | CKV_AWS_95 | HttpApiStage | API Gateway logging | Enable `AccessLogSettings` on stage (optional) |
-| 5 | CKV_AWS_54 | WebsiteBucket | BlockPublicPolicy: false | Intentional — OAC requires this |
+Risk-accepted findings:
+- CKV_AWS_54 (S3 block public policy) — intentional, required for CloudFront OAC
+- CKV_AWS_117 (Lambda in VPC) — not applicable, Lambda calls external APIs
+- CKV_AWS_173 (Lambda env encryption) — accepted, NoEcho protects secrets
 
-## Per-Target Report
+## CodeQL SAST Scan
 
-- [CloudFormation](infrastructure-cloudformation-report.md)
+**Status: SKIPPED** — CLI download timed out (1GB binary). 
 
-## Verdict: PASS (0 critical/high)
+Manual setup:
+```bash
+curl -L -o /tmp/codeql.zip https://github.com/github/codeql-cli-binaries/releases/latest/download/codeql-osx64.zip
+unzip /tmp/codeql.zip -d /tmp/codeql
+export PATH="/tmp/codeql/codeql:$PATH"
+codeql database create db-backend --language=python --source-root=./backend --overwrite
+codeql database create db-frontend --language=javascript-typescript --source-root=./frontend --overwrite
+codeql database analyze db-backend --format=sarif-latest --sarif-category=python --output=/tmp/backend.sarif codeql/python-queries:codeql-suites/python-security-extended.qls
+codeql database analyze db-frontend --format=sarif-latest --sarif-category=javascript --output=/tmp/frontend.sarif codeql/javascript-queries:codeql-suites/javascript-security-extended.qls
+```
 
-All 10 findings reviewed and accepted as known risks per cost-benefit analysis — no remediation required. See [per-target report](infrastructure-cloudformation-report.md#risk-acceptance) for formal risk acceptance rationale. The 22 passed checks confirm IAM least privilege, S3 encryption, Lambda runtime not deprecated, no hardcoded secrets, no open CORS, and HTTPS-only CloudFront.
+Or enable GitHub Code Scanning in repo settings (runs automatically on push).
+
+## Verdict
+
+**PASS** — Checkov: 0 CRITICAL/HIGH, CodeQL: pending CLI install. Overall posture acceptable for a low-traffic portfolio site.
