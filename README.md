@@ -15,9 +15,16 @@ visibility (AEO/GEO), and social sharing previews.
 
 *Generated with [AWS Diagram-as-Code](https://github.com/awslabs/diagram-as-code)*.
 
-The diagram shows two runtime flows: static content via **Route53 → CloudFront**
-(TLS via ACM) → **S3** with OAC, and contact forms via **hCaptcha → API Gateway →
-Lambda** (IAM least privilege) → **SES** with SPF/DKIM/DMARC.
+The diagram shows two runtime flows from the visitor's Browser (external, left,
+stacked above hCaptcha): static content via **Route53 → CloudFront**
+(TLS via ACM) → **S3** with OAC, and contact forms via **hCaptcha**
+(challenge round-trip) → **API Gateway → Lambda** (IAM least privilege —
+`ses:SendEmail` only) → **SES**. Email authentication records (SPF / DKIM /
+DMARC / MAIL FROM / ALIAS A) are rolled up into Route53, CloudFront's 5 security
+headers (HSTS, XFO, XCTO, RP, XSS) live on the ResponseHeadersPolicy child, and
+the recipient mailbox (Google Workspace) is configured via `RECIPIENT_EMAIL` —
+all documented in the [SES Domain Setup](#ses-domain-setup) and
+[Infrastructure as Code](#infrastructure-as-code) sections below.
 
 ### Infrastructure as Code
 
@@ -214,7 +221,7 @@ process behind the product:
 
 | Artifact | Description |
 |---|---|---|
-| [`docs/diagrams/aws-architecture.png`](docs/diagrams/aws-architecture.png) | **AWS architecture diagram** — runtime flow: Route53 → CloudFront (TLS via ACM) → S3 + API Gateway → Lambda (IAM least privilege) → SES with SPF/DKIM/DMARC. Generated via AWS [Diagram-as-Code](https://github.com/awslabs/diagram-as-code). |
+| [`docs/diagrams/aws-architecture.png`](docs/diagrams/aws-architecture.png) | **AWS architecture diagram v3.0** — visitor's Browser (with hCaptcha challenge/token loop on left) → Route53 → CloudFront (TLS via ACM child + ResponseHeadersPolicy child) → S3 (OAC), plus contact form path API Gateway → Lambda (IAM `ses:SendEmail` only) → SES. 11 nodes, 8 links. Detail (5 email-auth records, 5 security headers, 3 Lambda annotations) lives in this README, not the diagram. Generated via AWS [Diagram-as-Code](https://github.com/awslabs/diagram-as-code). |
 | [`docs/superpowers/specs/2025-07-09-resume-website-design.md`](docs/superpowers/specs/2025-07-09-resume-website-design.md) | **Design spec** — requirements, constraints, architecture decisions, neo-brutalism design tokens, responsive breakpoints, TDD strategy. 252 lines covering the "what and why" before code was written. |
 | [`docs/superpowers/plans/2025-07-09-resume-website.md`](docs/superpowers/plans/2025-07-09-resume-website.md) | **Implementation plan** — 20-task executable roadmap with file paths, dependencies, and test-first requirements. 2006 lines executed via TDD + subagent-driven-development. |
 | [`security-report/codeql/2025-07-09-security-audit.md`](security-report/codeql/2025-07-09-security-audit.md) | **Security audit** — multi-language CodeQL analysis: 157 queries (0 automated findings), manual review findings with severity ratings, and verified fixes. Per-language reports and SARIF in [`codeql/`](security-report/codeql/). |
