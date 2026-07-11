@@ -3,6 +3,8 @@
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
 command builds, provisions infrastructure, uploads, and configures DNS.
 74 tests across 4 suites. 14 AWS resources managed via CloudFormation.
+SEO-optimized with OG/Twitter Cards, JSON-LD structured data for AI
+visibility (AEO/GEO), and social sharing previews.
  Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills & Tools Used](#skills--tools-used)).
 
 ---
@@ -43,6 +45,7 @@ template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
 | **SPF** | `v=spf1 include:_spf.google.com include:amazonses.com ~all` |
 | **DKIM** | 3 signing keys via Amazon SES |
 | **DMARC** | `p=none` — monitoring mode (reports to admin email) |
+| **AEO/GEO** | JSON-LD Person schema with `sameAs` (LinkedIn+GitHub), `alumniOf`, `worksFor`, `knowsAbout`, `hasCredential`, `knowsLanguage` for entity disambiguation |
 
 ---
 
@@ -59,6 +62,7 @@ template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
 | **Testing** | Vitest + testing-library (15), pytest (29), bash mocks (13 deploy + 17 template) |
 | **Design** | Neo-brutalism (ui-ux-pro-max design system) |
 | **Analytics** | Google Analytics 4 (GTM gtag.js, injected via `VITE_GTM_ID` at build time) |
+| **SEO & Social** | OG Cards, Twitter Cards, JSON-LD Person schema, robots.txt, canonical URL |
 | **CI/CD** | `deploy.sh` — 1 command: build → deploy → invalidate |
 
 ---
@@ -85,7 +89,9 @@ flowchart TD
 ```
 
 **Code review is a gate**: fail → loop back to TDD. Pass → continue to deploy.
-Each phase maps to a Superpowers or community skill:
+Multi-agent consortium audits (MoA) validate design specs before implementation
+(SEO → Security → Social → AEO/GEO agents). Each phase maps to a Superpowers or
+community skill:
 **brainstorming** (design) → **writing-plans** (breakdown) → **TDD** (tests first) →
 **subagent-driven-development** (parallel execution) → **requesting/receiving-code-review** →
 **deploy.sh** (CI/CD) → **Playwright MCP** (browser testing) →
@@ -166,7 +172,10 @@ Identified technical friction points during development and built automated guar
 | **Quality gate** | `verification-before-completion` | Superpowers | Ran all 74 tests + lint before every completion claim |
 | **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
 | **Code review response** | `receiving-code-review` | Superpowers | Security audit feedback: dev-bypass gating, CSP hardening, error message sanitization |
-| **Browser testing** | `Playwright MCP` | OpenCode | Automated end-to-end browser testing of contact form and CSP |
+| **Consortium audit** | `brainstorming` | Superpowers | 4-agent MoA audit (SEO/Security/Social/AEO) — validated design spec v1.1 before implementation |
+| **Social debug** | `systematic-debugging` | Superpowers | Traced transparent PNG root cause — Canvas `fillText()` failed on `about:blank` (no fonts). Fixed with Python Pillow + Helvetica Bold. LinkedIn OG scraper diagnostic via Playwright. |
+| **Image generation** | Python Pillow | Community | EP monogram social share image (1200×630, 7KB) — identical visual identity to favicon |
+| **Browser testing** | `Playwright MCP` | OpenCode | Automated end-to-end browser testing of contact form, CSP, and social sharing debuggers |
 | **Diagram as code** | `awdsac-mcp-server` | AWS | Professional AWS architecture diagram with standard icons ([source](docs/diagrams/aws-architecture.yaml)) |
 | **Process artifacts** | `docs/superpowers/specs/` + `docs/superpowers/plans/` | — | Full lifecycle from design spec to implementation plan — see [Development Artifacts](#development-artifacts) |
 
@@ -205,11 +214,13 @@ process behind the product:
 
 | Artifact | Description |
 |---|---|---|
-| [`docs/diagrams/aws-architecture.png`](docs/diagrams/aws-architecture.png) | **AWS architecture diagram** — runtime flow: CloudFront → S3 + API Gateway → Lambda → SES. Generated via AWS [Diagram-as-Code](https://github.com/awslabs/diagram-as-code). |
+| [`docs/diagrams/aws-architecture.png`](docs/diagrams/aws-architecture.png) | **AWS architecture diagram** — runtime flow: Route53 → CloudFront (TLS via ACM) → S3 + API Gateway → Lambda (IAM least privilege) → SES with SPF/DKIM/DMARC. Generated via AWS [Diagram-as-Code](https://github.com/awslabs/diagram-as-code). |
 | [`docs/superpowers/specs/2025-07-09-resume-website-design.md`](docs/superpowers/specs/2025-07-09-resume-website-design.md) | **Design spec** — requirements, constraints, architecture decisions, neo-brutalism design tokens, responsive breakpoints, TDD strategy. 252 lines covering the "what and why" before code was written. |
 | [`docs/superpowers/plans/2025-07-09-resume-website.md`](docs/superpowers/plans/2025-07-09-resume-website.md) | **Implementation plan** — 20-task executable roadmap with file paths, dependencies, and test-first requirements. 2006 lines executed via TDD + subagent-driven-development. |
 | [`security-report/codeql/2025-07-09-security-audit.md`](security-report/codeql/2025-07-09-security-audit.md) | **Security audit** — multi-language CodeQL analysis: 157 queries (0 automated findings), manual review findings with severity ratings, and verified fixes. Per-language reports and SARIF in [`codeql/`](security-report/codeql/). |
 | [`security-report/checkov/summary-report.md`](security-report/checkov/summary-report.md) | **IaC audit** — Checkov CloudFormation scan: 22 passed, 10 informational. No critical/high misconfigurations. All findings documented with rationale. |
+| [`docs/superpowers/specs/2025-07-11-seo-social-sharing-design.md`](docs/superpowers/specs/2025-07-11-seo-social-sharing-design.md) | **SEO & Social sharing design spec** — OG/Twitter Cards, JSON-LD Person schema, AEO/GEO strategy. v1.1 after 4-agent consortium audit (SEO, Security, Social Compliance, AEO). |
+| [`docs/superpowers/plans/2025-07-11-seo-social-sharing.md`](docs/superpowers/plans/2025-07-11-seo-social-sharing.md) | **Implementation plan** — 10-task SDLC-gated roadmap: resume.json skills fix, robots.txt, og-image generation (1200×630 EP monogram), OG/Twitter/SEO meta tags, JSON-LD structured data, test suite verification (44/44), CodeQL + Checkov rescan, deploy. |
 
 ---
 
