@@ -8,7 +8,7 @@ Diagram:
       Direction: vertical
       Children:
         - MainRow
-    MainRow:
+MainRow:
       Type: AWS::Diagram::HorizontalStack
       Children:
         - ExternalStack
@@ -17,7 +17,9 @@ Diagram:
       Type: AWS::Diagram::VerticalStack
       Children:
         - Browser
+        - SpacerExternal1
         - HCaptcha
+        - SpacerExternal2
         - UpstashRedis
     Browser:
       Type: AWS::Diagram::Resource
@@ -25,9 +27,13 @@ Diagram:
     HCaptcha:
       Type: AWS::Diagram::Resource
       Title: "hCaptcha"
+    SpacerExternal1:
+      Type: AWS::Diagram::Resource
     UpstashRedis:
       Type: AWS::Diagram::Resource
       Title: "Upstash Redis"
+    SpacerExternal2:
+      Type: AWS::Diagram::Resource
     AWSCloud:
       Type: AWS::Diagram::Cloud
       Preset: AWSCloudNoLogo
@@ -68,6 +74,7 @@ Diagram:
       Children:
         - ApiGateway
         - LambdaFunction
+        - SpacerBackend1
         - SimpleEmailService
     ApiGateway:
       Type: AWS::ApiGateway::RestApi
@@ -81,6 +88,8 @@ Diagram:
     LambdaRole:
       Type: AWS::IAM::Role
       Preset: IAMRole
+    SpacerBackend1:
+      Type: AWS::Diagram::Resource
     SimpleEmailService:
       Type: AWS::SES::Email
       Preset: SimpleEmailServiceEmail
@@ -95,7 +104,7 @@ Diagram:
       Labels:
         TargetLeft:
           Title: "DNS"
-    - Source: Browser
+- Source: Browser
       Target: CloudFrontDist
       SourcePosition: E
       TargetPosition: W
@@ -134,21 +143,21 @@ Diagram:
         TargetLeft:
           Title: "ses:SendEmail"
     - Source: LambdaFunction
-      Target: SimpleEmailService
       SourcePosition: E
+      Target: SimpleEmailService
       TargetPosition: W
       TargetArrowHead:
         Type: Open
       Type: orthogonal
     - Source: LambdaFunction
+      SourcePosition: W
       Target: UpstashRedis
-      SourcePosition: E
-      TargetPosition: W
+      TargetPosition: E
       TargetArrowHead:
         Type: Open
       Type: orthogonal
       Labels:
-        TargetLeft:
+        SourceLeft:
           Title: "REST"
     - Source: CloudFrontDist
       SourcePosition: SE
