@@ -215,19 +215,32 @@ Identified technical friction points during development and built automated guar
 
 ## Development Artifacts
 
-This repo documents the full software engineering lifecycle — from design spec
-through implementation plan to tested, deployed code. These artifacts show the
-process behind the product:
+Every feature starts with a design spec, is executed against a TDD-gated plan,
+and closes with a security audit. These artifacts show the process, not just
+the product.
 
-| Artifact | Description |
-|---|---|---|
-| [`docs/diagrams/aws-architecture.png`](docs/diagrams/aws-architecture.png) | **AWS architecture diagram v3.0** — visitor's Browser (with hCaptcha challenge/token loop on left) → Route53 → CloudFront (TLS via ACM child + ResponseHeadersPolicy child) → S3 (OAC), plus contact form path API Gateway → Lambda (IAM `ses:SendEmail` only) → SES. 11 nodes, 8 links. Detail (5 email-auth records, 5 security headers, 3 Lambda annotations) lives in this README, not the diagram. Generated via AWS [Diagram-as-Code](https://github.com/awslabs/diagram-as-code). |
-| [`docs/superpowers/specs/2025-07-09-resume-website-design.md`](docs/superpowers/specs/2025-07-09-resume-website-design.md) | **Design spec** — requirements, constraints, architecture decisions, neo-brutalism design tokens, responsive breakpoints, TDD strategy. 252 lines covering the "what and why" before code was written. |
-| [`docs/superpowers/plans/2025-07-09-resume-website.md`](docs/superpowers/plans/2025-07-09-resume-website.md) | **Implementation plan** — 20-task executable roadmap with file paths, dependencies, and test-first requirements. 2006 lines executed via TDD + subagent-driven-development. |
-| [`security-report/codeql/2025-07-09-security-audit.md`](security-report/codeql/2025-07-09-security-audit.md) | **Security audit** — multi-language CodeQL analysis: 157 queries (0 automated findings), manual review findings with severity ratings, and verified fixes. Per-language reports and SARIF in [`codeql/`](security-report/codeql/). |
-| [`security-report/checkov/summary-report.md`](security-report/checkov/summary-report.md) | **IaC audit** — Checkov CloudFormation scan: 22 passed, 10 informational. No critical/high misconfigurations. All findings documented with rationale. |
-| [`docs/superpowers/specs/2025-07-11-seo-social-sharing-design.md`](docs/superpowers/specs/2025-07-11-seo-social-sharing-design.md) | **SEO & Social sharing design spec** — OG/Twitter Cards, JSON-LD Person schema, AEO/GEO strategy. v1.1 after 4-agent consortium audit (SEO, Security, Social Compliance, AEO). |
-| [`docs/superpowers/plans/2025-07-11-seo-social-sharing.md`](docs/superpowers/plans/2025-07-11-seo-social-sharing.md) | **Implementation plan** — 10-task SDLC-gated roadmap: resume.json skills fix, robots.txt, og-image generation (1200×630 EP monogram), OG/Twitter/SEO meta tags, JSON-LD structured data, test suite verification (44/44), CodeQL + Checkov rescan, deploy. |
+### Design Specs
+
+| Spec | Scope |
+|---|---|
+| [`resume-website`](docs/superpowers/specs/2025-07-09-resume-website-design.md) | Architecture decisions, neo-brutalist design tokens, responsive breakpoints, TDD strategy |
+| [`seo-social-sharing`](docs/superpowers/specs/2025-07-11-seo-social-sharing-design.md) | OG/Twitter Cards, JSON-LD Person schema, AEO/GEO entity disambiguation (MoA-audited v1.1) |
+| [`robots-txt-fix`](docs/superpowers/specs/2026-07-11-robots-txt-fix-design.md) | AI crawler explicit Allow directives, Google-Extended opt-out resolution |
+| [`aws-architecture-diagram-v3`](docs/superpowers/specs/2026-07-11-aws-architecture-diagram-v3-design.md) | 11-node overlap-free L→R layout redesign |
+
+### Implementation Plans
+
+| Plan | Scope |
+|---|---|
+| [`resume-website`](docs/superpowers/plans/2025-07-09-resume-website.md) | Full-stack deployment: S3/CloudFront, Lambda contact form with hCaptcha, API Gateway, Route53 DNS, neo-brutalist CSS, 30 shell unit tests |
+| [`seo-social-sharing`](docs/superpowers/plans/2025-07-11-seo-social-sharing.md) | robots.txt, OG image generation, OG/Twitter/SEO meta tags, JSON-LD schema, security rescan, deploy |
+
+### Security Reports
+
+| Report | Scope |
+|---|---|
+| [`codeql`](security-report/codeql/2025-07-09-security-audit.md) | Multi-language SAST: Python + JavaScript — 157 queries, 0 automated findings, 3 manual fixes verified |
+| [`checkov`](security-report/checkov/summary-report.md) | CloudFormation IaC scan — 22 checks passed, 0 critical/high misconfigurations |
 
 ---
 
