@@ -33,14 +33,11 @@ if aws cloudformation describe-stacks --stack-name "$STACK_NAME" > /dev/null 2>&
   EXISTING_SITEKEY=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="HCaptchaSiteKey") | .ParameterValue' 2>/dev/null)
   EXISTING_DOMAIN=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="DomainName") | .ParameterValue' 2>/dev/null)
   EXISTING_CERT=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="CertificateArn") | .ParameterValue' 2>/dev/null)
-  EXISTING_UPSTASH_URL=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="UpstashRedisUrl") | .ParameterValue' 2>/dev/null)
-  EXISTING_UPSTASH_TOKEN=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="UpstashRedisToken") | .ParameterValue' 2>/dev/null)
   echo "Stack '$STACK_NAME' exists. Current config:"
   echo "  Sender:     $EXISTING_SENDER"
   echo "  Recipient:  $EXISTING_RECIPIENT"
   echo "  SiteKey:    $EXISTING_SITEKEY"
   [ -n "$EXISTING_DOMAIN" ] && echo "  Domain:     $EXISTING_DOMAIN"
-  [ -n "$EXISTING_UPSTASH_URL" ] && echo "  Upstash:    $EXISTING_UPSTASH_URL"
   echo "  SiteKey now: $HCAPTCHA_SITEKEY"
   [ -n "$GTM_ID" ] && echo "  GTM ID:     $GTM_ID" || echo "  GTM:        (not set)"
 else
@@ -48,8 +45,6 @@ else
 fi
 
 # Gather parameters
-EXISTING_UPSTASH_URL="${EXISTING_UPSTASH_URL:-}"
-EXISTING_UPSTASH_TOKEN="${EXISTING_UPSTASH_TOKEN:-}"
 if [ "$STACK_EXISTS" = true ]; then
   read -p "Sender email [$EXISTING_SENDER]: " SENDER_EMAIL
   SENDER_EMAIL="${SENDER_EMAIL:-$EXISTING_SENDER}"
@@ -62,18 +57,10 @@ else
 fi
 read -s -p "hCaptcha secret (leave empty to keep existing): " HCAPTCHA_SECRET
 echo ""
-if [ "$STACK_EXISTS" = true ] && [ -n "$EXISTING_UPSTASH_URL" ]; then
-  echo "Upstash Redis URL (leave empty to keep existing: $EXISTING_UPSTASH_URL)"
-fi
-read -s -p "Upstash Redis URL: " UPSTASH_REDIS_URL
+read -s -p "Upstash Redis URL (leave empty to keep existing): " UPSTASH_REDIS_URL
 echo ""
-UPSTASH_REDIS_URL="${UPSTASH_REDIS_URL:-$EXISTING_UPSTASH_URL}"
-if [ "$STACK_EXISTS" = true ] && [ -n "$EXISTING_UPSTASH_URL" ]; then
-  echo "Upstash Redis token (leave empty to keep existing)"
-fi
-read -s -p "Upstash Redis token: " UPSTASH_REDIS_TOKEN
+read -s -p "Upstash Redis token (leave empty to keep existing): " UPSTASH_REDIS_TOKEN
 echo ""
-UPSTASH_REDIS_TOKEN="${UPSTASH_REDIS_TOKEN:-$EXISTING_UPSTASH_TOKEN}"
 if [ -t 0 ]; then
   read -p "Google Analytics ID (${GTM_ID:-}, leave empty to skip): " GTM_INPUT
   GTM_ID="${GTM_INPUT:-$GTM_ID}"
@@ -367,7 +354,6 @@ fi
 # Deploy/update stack
 echo ""
 echo "=== Deploying stack: $STACK_NAME ==="
-echo "Upstash URL param: '$UPSTASH_REDIS_URL'"
 aws cloudformation deploy \
   --template-file "$SCRIPT_DIR/infrastructure/template.yaml" \
   --stack-name "$STACK_NAME" \
