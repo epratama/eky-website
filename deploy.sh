@@ -22,6 +22,8 @@ fi
 
 HCAPTCHA_SITEKEY="e1d21a02-d3c8-4d2e-aee0-7e3671820d2a"
 GTM_ID="${GTM_ID:-}"
+UPSTASH_REDIS_URL="${UPSTASH_REDIS_URL:-}"
+UPSTASH_REDIS_TOKEN="${UPSTASH_REDIS_TOKEN:-}"
 
 # Check if stack exists, fetch current values
 STACK_EXISTS=false
@@ -57,10 +59,13 @@ else
 fi
 read -s -p "hCaptcha secret (leave empty to keep existing): " HCAPTCHA_SECRET
 echo ""
-read -s -p "Upstash Redis URL (leave empty to keep existing): " UPSTASH_REDIS_URL
-echo ""
-read -s -p "Upstash Redis token (leave empty to keep existing): " UPSTASH_REDIS_TOKEN
-echo ""
+if [ -z "$UPSTASH_REDIS_URL" ] && [ -t 0 ]; then
+  read -p "Upstash Redis URL: " UPSTASH_REDIS_URL
+fi
+if [ -z "$UPSTASH_REDIS_TOKEN" ] && [ -t 0 ]; then
+  read -s -p "Upstash Redis token: " UPSTASH_REDIS_TOKEN
+  echo ""
+fi
 if [ -t 0 ]; then
   read -p "Google Analytics ID (${GTM_ID:-}, leave empty to skip): " GTM_INPUT
   GTM_ID="${GTM_INPUT:-$GTM_ID}"
@@ -70,6 +75,20 @@ if [ -t 0 ]; then
       sed -i '' "s/^GTM_ID=.*/GTM_ID=$GTM_ID/" "$SCRIPT_DIR/.env"
     else
       echo "GTM_ID=$GTM_ID" >> "$SCRIPT_DIR/.env"
+    fi
+  fi
+  if [ -n "$UPSTASH_REDIS_URL" ]; then
+    if grep -q "^UPSTASH_REDIS_URL=" "$SCRIPT_DIR/.env" 2>/dev/null; then
+      sed -i '' "s|^UPSTASH_REDIS_URL=.*|UPSTASH_REDIS_URL=$UPSTASH_REDIS_URL|" "$SCRIPT_DIR/.env"
+    else
+      echo "UPSTASH_REDIS_URL=$UPSTASH_REDIS_URL" >> "$SCRIPT_DIR/.env"
+    fi
+  fi
+  if [ -n "$UPSTASH_REDIS_TOKEN" ]; then
+    if grep -q "^UPSTASH_REDIS_TOKEN=" "$SCRIPT_DIR/.env" 2>/dev/null; then
+      sed -i '' "s|^UPSTASH_REDIS_TOKEN=.*|UPSTASH_REDIS_TOKEN=$UPSTASH_REDIS_TOKEN|" "$SCRIPT_DIR/.env"
+    else
+      echo "UPSTASH_REDIS_TOKEN=$UPSTASH_REDIS_TOKEN" >> "$SCRIPT_DIR/.env"
     fi
   fi
 fi
@@ -354,6 +373,9 @@ fi
 # Deploy/update stack
 echo ""
 echo "=== Deploying stack: $STACK_NAME ==="
+echo "DEBUG: UPSTASH_REDIS_URL length=${#UPSTASH_REDIS_URL}"
+echo "DEBUG: UPSTASH_REDIS_TOKEN length=${#UPSTASH_REDIS_TOKEN}"
+echo "DEBUG: PARAMS contains ${#PARAMS[@]} items"
 aws cloudformation deploy \
   --template-file "$SCRIPT_DIR/infrastructure/template.yaml" \
   --stack-name "$STACK_NAME" \
