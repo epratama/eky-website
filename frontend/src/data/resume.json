@@ -108,7 +108,7 @@
     },
     {
       "category": "Languages & Frameworks",
-      "items": ["PHP", "JavaScript", "Node.js", "jQuery", "CSS/Sass", "Bootstrap", "SurveyJS"]
+      "items": ["PHP", "JavaScript", "Node.js", "React.js", "Python", "jQuery", "CSS/Sass", "Bootstrap", "SurveyJS"]
     }
   ],
   "education": [
