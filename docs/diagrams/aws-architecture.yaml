@@ -60,7 +60,7 @@ Diagram:
         Type: Open
       Type: orthogonal
       Labels:
-        SourceRight:
+        TargetLeft:
           Title: "ALIAS A"
     - Source: CloudFrontDist
       SourcePosition: S
@@ -70,7 +70,7 @@ Diagram:
         Type: Open
       Type: orthogonal
       Labels:
-        SourceRight:
+        TargetLeft:
           Title: "OAC"
     - Source: ApiGateway
       SourcePosition: S
@@ -80,7 +80,7 @@ Diagram:
         Type: Open
       Type: orthogonal
       Labels:
-        SourceRight:
+        TargetLeft:
           Title: "AWS_PROXY"
     - Source: LambdaFunction
       SourcePosition: E
@@ -89,6 +89,3 @@ Diagram:
       TargetArrowHead:
         Type: Open
       Type: orthogonal
-      Labels:
-        SourceRight:
-          Title: "SPF+DKIM+DMARC"
