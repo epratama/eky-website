@@ -1,20 +1,28 @@
-# CodeQL Security Scan Report
+# CodeQL Scan — JavaScript/TypeScript (frontend)
 
-| Field | Value |
-|-------|-------|
-| **Language** | JavaScript/TypeScript |
-| **Source Path** | `./frontend` |
-| **Scan Date** | 2026-07-10 |
-| **Query Suite** | `codeql-suites/javascript-security-extended.qls` |
-| **CodeQL Version** | 2.26.0 |
-| **Files Scanned** | 7 source files |
+**Date:** 2026-07-12 | **Tool:** CodeQL 2.26.0
+**Source:** `./frontend` (7 JS files)
+**Query suite:** `codeql/javascript-queries:codeql-suites/javascript-security-extended.qls`
 
 ## Findings
 
-| Severity | Rule | File:Line | Description |
-|----------|------|-----------|-------------|
-| (none) | — | — | No findings |
+| Severity | Count |
+|----------|-------|
+| Critical | 0 |
+| High | 0 |
+| Medium | 0 |
+| Low | 2 |
+| Warning | 0 |
+
+### Low (2)
+
+| Rule | File:Line | Issue |
+|------|-----------|-------|
+| `js/shell-command-injection-from-environment` | `src/__tests__/App.test.jsx:78` | execSync runs Vite build for GTM test |
+| `js/shell-command-injection-from-environment` | `src/__tests__/App.test.jsx:85` | execSync removes test directory |
+
+Both are **false positives** — `execSync` is used in test code with controlled paths (`resolve(__dirname, ...)` + `process.env`), not user input. No action needed.
 
 ## Verdict
 
-**PASS** — 0 critical, 0 high, 0 medium, 0 low findings.
+**PASS** — 0 critical/high/medium. 2 low false positives in test code.
