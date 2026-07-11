@@ -9,32 +9,25 @@ command builds, provisions infrastructure, uploads, and configures DNS.
 
 ## Architecture
 
-```
-                  Route53
-               (yourdomain.com)
-                    │ ALIAS A
-                    ▼
-     ┌──────────────────────────────┐
-     │  CloudFront (HTTPS, HTTP/3)  │◄── ACM cert (us-east-1)
-     └──────────────┬───────────────┘
-                    │ OAC
-                    ▼
-     ┌──────────────────────────┐
-     │     S3 (static site)     │
-     └──────────────────────────┘
+![AWS Architecture](docs/diagrams/aws-architecture.png)
 
-     ┌──────────┐    ┌───────────────┐    ┌──────────────┐   ┌─────┐
-     │ hCaptcha │───▶│  API Gateway  │───▶│    Lambda    │──▶│ SES │
-     │ invisible│    │   HTTP API    │    │  Python 3.12 │   │     │
-     └──────────┘    └───────────────┘    │  Origin ✓    │   └──┬──┘
-                                          │  Rate 3/min  │      │
-                                          │  CORS        │      │
-                                          └──────────────┘      │
-                                                            SPF+DKIM
-                                                             +DMARC
-                                                                ▼
-                                                          Your inbox
-```
+*Generated with [AWS Diagram-as-Code](https://github.com/awslabs/diagram-as-code)*.
+
+The diagram shows two runtime flows: static content via **CloudFront → S3** with
+OAC, and contact forms via **API Gateway → Lambda → SES** with hCaptcha + SPF/DKIM/DMARC.
+
+### Infrastructure as Code
+
+All 14 AWS resources are provisioned declaratively via a single CloudFormation
+template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
+
+| Category | Resources | Details |
+|---|---|---|
+| **DNS** | Route53 | ALIAS A records (root + www), SES verification, SPF, DKIM, DMARC |
+| **CDN + Storage** | CloudFront, S3, CachePolicy, OriginRequestPolicy, ResponseHeadersPolicy, OAC | HTTPS/HTTP3, inline policies, security headers (XFO, HSTS, XCTO, RP) |
+| **Compute** | Lambda, IAM Role | Python 3.12, 5 concurrency, `ses:SendEmail` only |
+| **API** | API Gateway HTTP API ×4 | AWS_PROXY integration, `POST /` route, `$default` stage |
+| **Parameters** | 6 CF params | Domain, Cert, hCaptcha (secret + site key), emails |
 
 ### Defense-in-depth
 
@@ -219,6 +212,7 @@ process behind the product:
 
 | Artifact | Description |
 |---|---|---|
+| [`docs/diagrams/aws-architecture.png`](docs/diagrams/aws-architecture.png) | **AWS architecture diagram** — runtime flow: CloudFront → S3 + API Gateway → Lambda → SES. Generated via AWS [Diagram-as-Code](https://github.com/awslabs/diagram-as-code). |
 | [`docs/superpowers/specs/2025-07-09-resume-website-design.md`](docs/superpowers/specs/2025-07-09-resume-website-design.md) | **Design spec** — requirements, constraints, architecture decisions, neo-brutalism design tokens, responsive breakpoints, TDD strategy. 252 lines covering the "what and why" before code was written. |
 | [`docs/superpowers/plans/2025-07-09-resume-website.md`](docs/superpowers/plans/2025-07-09-resume-website.md) | **Implementation plan** — 20-task executable roadmap with file paths, dependencies, and test-first requirements. 2006 lines executed via TDD + subagent-driven-development. |
 | [`security-report/codeql/2025-07-09-security-audit.md`](security-report/codeql/2025-07-09-security-audit.md) | **Security audit** — multi-language CodeQL analysis: 157 queries (0 automated findings), manual review findings with severity ratings, and verified fixes. Per-language reports and SARIF in [`codeql/`](security-report/codeql/). |

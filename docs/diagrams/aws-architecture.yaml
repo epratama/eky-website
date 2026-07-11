@@ -1,0 +1,94 @@
+Diagram:
+  DefinitionFiles:
+    - Type: URL
+      Url: https://raw.githubusercontent.com/awslabs/diagram-as-code/main/definitions/definition-for-aws-icons-light.yaml
+  Resources:
+    Canvas:
+      Type: AWS::Diagram::Canvas
+      Direction: vertical
+      Children:
+        - AWSCloud
+    AWSCloud:
+      Type: AWS::Diagram::Cloud
+      Preset: AWSCloudNoLogo
+      Direction: vertical
+      Children:
+        - ArchitectureLayers
+    ArchitectureLayers:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - CDNLayer
+        - BackendLayer
+    CDNLayer:
+      Type: AWS::Diagram::VerticalStack
+      Children:
+        - Route53
+        - CloudFrontDist
+    Route53:
+      Type: AWS::Route53::HostedZone
+      Preset: Route53HostedZone
+    CloudFrontDist:
+      Type: AWS::CloudFront::Distribution
+      Preset: CloudFrontDistribution
+      Children:
+        - WebsiteBucket
+    WebsiteBucket:
+      Type: AWS::S3::Bucket
+      Preset: S3Bucket
+    BackendLayer:
+      Type: AWS::Diagram::VerticalStack
+      Children:
+        - ApiGateway
+        - SimpleEmailService
+    ApiGateway:
+      Type: AWS::ApiGateway::RestApi
+      Preset: ApiGatewayRestApi
+      Children:
+        - LambdaFunction
+    LambdaFunction:
+      Type: AWS::Lambda::Function
+      Preset: LambdaFunction
+    SimpleEmailService:
+      Type: AWS::SES::Email
+      Preset: SimpleEmailServiceEmail
+  Links:
+    - Source: Route53
+      SourcePosition: S
+      Target: CloudFrontDist
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        SourceRight:
+          Title: "ALIAS A"
+    - Source: CloudFrontDist
+      SourcePosition: S
+      Target: WebsiteBucket
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        SourceRight:
+          Title: "OAC"
+    - Source: ApiGateway
+      SourcePosition: S
+      Target: LambdaFunction
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        SourceRight:
+          Title: "AWS_PROXY"
+    - Source: LambdaFunction
+      SourcePosition: E
+      Target: SimpleEmailService
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        SourceRight:
+          Title: "SPF+DKIM+DMARC"
