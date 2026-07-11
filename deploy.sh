@@ -336,9 +336,13 @@ if [ -n "$HCAPTCHA_SECRET" ]; then
 fi
 if [ -n "$UPSTASH_REDIS_URL" ]; then
   PARAMS+=(ParameterKey=UpstashRedisUrl,ParameterValue="$UPSTASH_REDIS_URL")
+else
+  PARAMS+=(ParameterKey=UpstashRedisUrl,ParameterValue="")
 fi
 if [ -n "$UPSTASH_REDIS_TOKEN" ]; then
   PARAMS+=(ParameterKey=UpstashRedisToken,ParameterValue="$UPSTASH_REDIS_TOKEN")
+else
+  PARAMS+=(ParameterKey=UpstashRedisToken,ParameterValue="")
 fi
 
 # Validate domain + cert consistency
@@ -356,6 +360,7 @@ fi
 # Deploy/update stack
 echo ""
 echo "=== Deploying stack: $STACK_NAME ==="
+echo "Upstash URL param: '$UPSTASH_REDIS_URL'"
 aws cloudformation deploy \
   --template-file "$SCRIPT_DIR/infrastructure/template.yaml" \
   --stack-name "$STACK_NAME" \
