@@ -31,6 +31,10 @@ Diagram:
       Preset: CloudFrontDistribution
       Children:
         - WebsiteBucket
+        - ACMCertificate
+    ACMCertificate:
+      Type: AWS::CertificateManager::Certificate
+      Preset: CertificateManager
     WebsiteBucket:
       Type: AWS::S3::Bucket
       Preset: S3Bucket
@@ -46,6 +50,11 @@ Diagram:
     LambdaFunction:
       Type: AWS::Lambda::Function
       Preset: LambdaFunction
+      Children:
+        - LambdaRole
+    LambdaRole:
+      Type: AWS::IAM::Role
+      Preset: IAMRole
     SimpleEmailService:
       Type: AWS::SES::Email
       Preset: SimpleEmailServiceEmail
@@ -60,6 +69,16 @@ Diagram:
       Labels:
         TargetLeft:
           Title: "ALIAS A"
+    - Source: CloudFrontDist
+      SourcePosition: E
+      Target: ACMCertificate
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        TargetRight:
+          Title: "TLS"
     - Source: CloudFrontDist
       SourcePosition: S
       Target: WebsiteBucket
@@ -80,6 +99,14 @@ Diagram:
       Labels:
         TargetLeft:
           Title: "AWS_PROXY"
+    - Source: LambdaFunction
+      SourcePosition: S
+      Target: LambdaRole
+      TargetPosition: N
+      Type: orthogonal
+      Labels:
+        TargetLeft:
+          Title: "ses:SendEmail"
     - Source: LambdaFunction
       SourcePosition: E
       Target: SimpleEmailService

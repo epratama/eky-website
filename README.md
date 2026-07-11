@@ -13,8 +13,9 @@ command builds, provisions infrastructure, uploads, and configures DNS.
 
 *Generated with [AWS Diagram-as-Code](https://github.com/awslabs/diagram-as-code)*.
 
-The diagram shows two runtime flows: static content via **CloudFront → S3** with
-OAC, and contact forms via **API Gateway → Lambda → SES** with hCaptcha + SPF/DKIM/DMARC.
+The diagram shows two runtime flows: static content via **Route53 → CloudFront**
+(TLS via ACM) → **S3** with OAC, and contact forms via **hCaptcha → API Gateway →
+Lambda** (IAM least privilege) → **SES** with SPF/DKIM/DMARC.
 
 ### Infrastructure as Code
 
@@ -24,7 +25,7 @@ template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
 | Category | Resources | Details |
 |---|---|---|
 | **DNS** | Route53 | ALIAS A records (root + www), SES verification, SPF, DKIM, DMARC |
-| **CDN + Storage** | CloudFront, S3, CachePolicy, OriginRequestPolicy, ResponseHeadersPolicy, OAC | HTTPS/HTTP3, inline policies, security headers (XFO, HSTS, XCTO, RP) |
+| **CDN + Storage** | CloudFront, S3, ACM, CachePolicy, OriginRequestPolicy, ResponseHeadersPolicy, OAC | HTTPS/HTTP3, TLS via ACM (us-east-1), inline policies, security headers (XFO, HSTS, XCTO, RP) |
 | **Compute** | Lambda, IAM Role | Python 3.12, 5 concurrency, `ses:SendEmail` only |
 | **API** | API Gateway HTTP API ×4 | AWS_PROXY integration, `POST /` route, `$default` stage |
 | **Parameters** | 6 CF params | Domain, Cert, hCaptcha (secret + site key), emails |
