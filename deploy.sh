@@ -33,11 +33,13 @@ if aws cloudformation describe-stacks --stack-name "$STACK_NAME" > /dev/null 2>&
   EXISTING_SITEKEY=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="HCaptchaSiteKey") | .ParameterValue' 2>/dev/null)
   EXISTING_DOMAIN=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="DomainName") | .ParameterValue' 2>/dev/null)
   EXISTING_CERT=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="CertificateArn") | .ParameterValue' 2>/dev/null)
+  EXISTING_UPSTASH_URL=$(echo "$DATA" | jq -r '.Stacks[0].Parameters[] | select(.ParameterKey=="UpstashRedisUrl") | .ParameterValue' 2>/dev/null)
   echo "Stack '$STACK_NAME' exists. Current config:"
   echo "  Sender:     $EXISTING_SENDER"
   echo "  Recipient:  $EXISTING_RECIPIENT"
   echo "  SiteKey:    $EXISTING_SITEKEY"
   [ -n "$EXISTING_DOMAIN" ] && echo "  Domain:     $EXISTING_DOMAIN"
+  [ -n "$EXISTING_UPSTASH_URL" ] && echo "  Upstash:    $EXISTING_UPSTASH_URL"
   echo "  SiteKey now: $HCAPTCHA_SITEKEY"
   [ -n "$GTM_ID" ] && echo "  GTM ID:     $GTM_ID" || echo "  GTM:        (not set)"
 else
@@ -56,6 +58,10 @@ else
   read -p "Recipient email: " RECIPIENT_EMAIL
 fi
 read -s -p "hCaptcha secret (leave empty to keep existing): " HCAPTCHA_SECRET
+echo ""
+read -s -p "Upstash Redis URL (leave empty to keep existing): " UPSTASH_REDIS_URL
+echo ""
+read -s -p "Upstash Redis token (leave empty to keep existing): " UPSTASH_REDIS_TOKEN
 echo ""
 if [ -t 0 ]; then
   read -p "Google Analytics ID (${GTM_ID:-}, leave empty to skip): " GTM_INPUT
@@ -327,6 +333,12 @@ PARAMS+=(ParameterKey=SenderEmail,ParameterValue="$SENDER_EMAIL")
 PARAMS+=(ParameterKey=RecipientEmail,ParameterValue="$RECIPIENT_EMAIL")
 if [ -n "$HCAPTCHA_SECRET" ]; then
   PARAMS+=(ParameterKey=HCaptchaSecret,ParameterValue="$HCAPTCHA_SECRET")
+fi
+if [ -n "$UPSTASH_REDIS_URL" ]; then
+  PARAMS+=(ParameterKey=UpstashRedisUrl,ParameterValue="$UPSTASH_REDIS_URL")
+fi
+if [ -n "$UPSTASH_REDIS_TOKEN" ]; then
+  PARAMS+=(ParameterKey=UpstashRedisToken,ParameterValue="$UPSTASH_REDIS_TOKEN")
 fi
 
 # Validate domain + cert consistency

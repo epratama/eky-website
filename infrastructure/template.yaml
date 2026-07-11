@@ -23,6 +23,14 @@ Parameters:
   SenderEmail:
     Type: String
     Description: SES verified email address for sending
+  UpstashRedisUrl:
+    Type: String
+    NoEcho: true
+    Description: Upstash Redis REST URL
+  UpstashRedisToken:
+    Type: String
+    NoEcho: true
+    Description: Upstash Redis REST token
 
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref DomainName, ""]]
@@ -194,7 +202,7 @@ Resources:
       Runtime: python3.12
       Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 10
+      Timeout: 12
       ReservedConcurrentExecutions: 5
       Environment:
         Variables:
@@ -204,13 +212,14 @@ Resources:
           ALLOWED_ORIGIN: !If [HasCustomDomain, !Sub "https://${DomainName}", ""]
           DOMAIN_NAME: !Ref DomainName
           ALLOW_CAPTCHA_BYPASS: "false"
+          UPSTASH_REDIS_REST_URL: !Ref UpstashRedisUrl
+          UPSTASH_REDIS_REST_TOKEN: !Ref UpstashRedisToken
       Code:
         ZipFile: |
-          import json, os, re, time
+          import json, os, re
           from http import HTTPStatus
           from urllib.parse import urlparse
-          import urllib.request
-          import urllib.parse
+          import urllib.request, urllib.parse
           import boto3
 
           RECIPIENT_EMAIL = os.environ["RECIPIENT_EMAIL"]
@@ -220,10 +229,13 @@ Resources:
           DOMAIN_NAME = os.environ.get("DOMAIN_NAME", "")
           ALLOW_CAPTCHA_BYPASS = os.environ.get("ALLOW_CAPTCHA_BYPASS", "") == "true"
           HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify"
+          UPSTASH_REDIS_REST_URL = os.environ["UPSTASH_REDIS_REST_URL"]
+          UPSTASH_REDIS_REST_TOKEN = os.environ["UPSTASH_REDIS_REST_TOKEN"]
+          RATE_MAX = 5
+          RATE_WINDOW = 300
           ses = boto3.client("ses")
           EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
           PHONE_RE = re.compile(r"^[+]?[\d\s\-().]{6,20}$")
-          rate_store = {}
 
           def _check_origin(headers):
               if not ALLOWED_ORIGIN:
@@ -237,14 +249,17 @@ Resources:
               return origin.scheme == allowed.scheme and origin_netloc == allowed_netloc
 
           def _rate_limit(ip):
-              now = time.time()
-              window = rate_store.get(ip, [])
-              window = [t for t in window if now - t < 60]
-              if len(window) >= 3:
-                  return False
-              window.append(now)
-              rate_store[ip] = window
-              return True
+              key = f"rate:{ip}"
+              try:
+                  incr_req = urllib.request.Request(f"{UPSTASH_REDIS_REST_URL}/incr/{key}", method="POST", headers={"Authorization": f"Bearer {UPSTASH_REDIS_REST_TOKEN}"})
+                  with urllib.request.urlopen(incr_req, timeout=1) as resp:
+                      count = json.loads(resp.read()).get("result", 0)
+                  expire_req = urllib.request.Request(f"{UPSTASH_REDIS_REST_URL}/expire/{key}/{RATE_WINDOW}", method="POST", headers={"Authorization": f"Bearer {UPSTASH_REDIS_REST_TOKEN}"})
+                  urllib.request.urlopen(expire_req, timeout=1)
+                  return count <= RATE_MAX
+              except Exception:
+                  print("Rate limit check failed")
+                  return True
 
           def handler(event, context):
               headers = {k.lower(): v for k, v in event.get("headers", {}).items()}
