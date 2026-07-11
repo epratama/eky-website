@@ -13,14 +13,13 @@ Diagram:
       Preset: AWSCloudNoLogo
       Direction: vertical
       Children:
-        - ArchitectureLayers
-    ArchitectureLayers:
-      Type: AWS::Diagram::HorizontalStack
-      Children:
         - CDNLayer
+        - Spacer1
         - BackendLayer
+    Spacer1:
+      Type: AWS::Diagram::Resource
     CDNLayer:
-      Type: AWS::Diagram::VerticalStack
+      Type: AWS::Diagram::HorizontalStack
       Children:
         - Route53
         - CloudFrontDist
@@ -36,15 +35,14 @@ Diagram:
       Type: AWS::S3::Bucket
       Preset: S3Bucket
     BackendLayer:
-      Type: AWS::Diagram::VerticalStack
+      Type: AWS::Diagram::HorizontalStack
       Children:
         - ApiGateway
+        - LambdaFunction
         - SimpleEmailService
     ApiGateway:
       Type: AWS::ApiGateway::RestApi
       Preset: ApiGatewayRestApi
-      Children:
-        - LambdaFunction
     LambdaFunction:
       Type: AWS::Lambda::Function
       Preset: LambdaFunction
@@ -73,9 +71,9 @@ Diagram:
         TargetLeft:
           Title: "OAC"
     - Source: ApiGateway
-      SourcePosition: S
+      SourcePosition: E
       Target: LambdaFunction
-      TargetPosition: N
+      TargetPosition: W
       TargetArrowHead:
         Type: Open
       Type: orthogonal
