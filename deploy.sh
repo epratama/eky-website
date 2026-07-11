@@ -451,9 +451,9 @@ aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*" --o
 echo ""
 if [ -n "$DOMAIN" ]; then
   echo "=== Configuring DNS ==="
-  ZONE_ID=$(aws route53 list-hosted-zones \
-    --query "HostedZones[?Name=='$DOMAIN'.]|[0].Id" \
-    --output text 2>/dev/null | sed 's|/hostedzone/||')
+  ZONE_ID=$(aws route53 list-hosted-zones --output json 2>/dev/null \
+    | jq -r --arg d "$DOMAIN." '.HostedZones[] | select(.Name==$d) | .Id' \
+    | sed 's|/hostedzone/||')
   if [ -n "$ZONE_ID" ] && [ "$ZONE_ID" != "None" ]; then
     echo "Route53 zone found: $ZONE_ID"
 
@@ -508,12 +508,16 @@ if [ -n "$DOMAIN" ]; then
       echo "All records already correct — nothing to do."
     fi
   else
-    echo "Domain not found in Route53. Add manually:"
-    echo "  $DOMAIN           CNAME  $DIST_DOMAIN"
-    echo "  www.$DOMAIN       CNAME  $DIST_DOMAIN"
-    if echo "$DOMAIN" | grep -q "\.com$"; then
-      echo "  Note: providers that block CNAME at root need ALIAS/ANAME."
-    fi
+    echo "Domain not found in Route53. Add DNS records at your provider:"
+    echo ""
+    echo "  Type   Name                        Value"
+    echo "  ----   ----                        -----"
+    echo "  A      $DOMAIN              ALIAS  $DIST_DOMAIN"
+    echo "  A      www.$DOMAIN          ALIAS  $DIST_DOMAIN"
+    echo ""
+    echo "  If your provider doesn't support ALIAS/ANAME at the root:"
+    echo "    - Redirect $DOMAIN to www.$DOMAIN"
+    echo "    - Create a CNAME for www.$DOMAIN → $DIST_DOMAIN"
   fi
   echo ""
   echo "=== Done: https://$DOMAIN ==="
