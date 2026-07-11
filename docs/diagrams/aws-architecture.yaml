@@ -7,7 +7,27 @@ Diagram:
       Type: AWS::Diagram::Canvas
       Direction: vertical
       Children:
+        - MainRow
+    MainRow:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - Visitor
+        - Browser
+        - HCaptcha
         - AWSCloud
+        - GoogleWorkspace
+    Visitor:
+      Type: AWS::Diagram::Resource
+      Title: "Visitor"
+    Browser:
+      Type: AWS::Diagram::Resource
+      Title: "Browser"
+    HCaptcha:
+      Type: AWS::Diagram::Resource
+      Title: "hCaptcha"
+    GoogleWorkspace:
+      Type: AWS::Diagram::Resource
+      Title: "Google Workspace"
     AWSCloud:
       Type: AWS::Diagram::Cloud
       Preset: AWSCloudNoLogo
@@ -23,19 +43,25 @@ Diagram:
       Children:
         - Route53
         - CloudFrontDist
+        - S3
     Route53:
       Type: AWS::Route53::HostedZone
       Preset: Route53HostedZone
+      Title: "Hosted zone\nSPF · DKIM · DMARC\nMAIL FROM · ALIAS A"
     CloudFrontDist:
       Type: AWS::CloudFront::Distribution
       Preset: CloudFrontDistribution
+      Direction: vertical
       Children:
-        - WebsiteBucket
         - ACMCertificate
+        - ResponseHeadersPolicy
     ACMCertificate:
       Type: AWS::CertificateManager::Certificate
       Preset: CertificateManager
-    WebsiteBucket:
+    ResponseHeadersPolicy:
+      Type: AWS::Diagram::Resource
+      Title: "HSTS · XFO DENY · XCTO · RP · XSS"
+    S3:
       Type: AWS::S3::Bucket
       Preset: S3Bucket
     BackendLayer:
@@ -50,6 +76,7 @@ Diagram:
     LambdaFunction:
       Type: AWS::Lambda::Function
       Preset: LambdaFunction
+      Title: "Lambda\nRate limit 3/min/IP\nOrigin check\nValidation"
       Children:
         - LambdaRole
     LambdaRole:
@@ -59,39 +86,58 @@ Diagram:
       Type: AWS::SES::Email
       Preset: SimpleEmailServiceEmail
   Links:
-    - Source: Route53
-      SourcePosition: S
-      Target: CloudFrontDist
-      TargetPosition: N
-      TargetArrowHead:
-        Type: Open
-      Type: orthogonal
-      Labels:
-        TargetLeft:
-          Title: "ALIAS A"
-    - Source: CloudFrontDist
+    - Source: Visitor
+      Target: Browser
       SourcePosition: E
-      Target: ACMCertificate
+      TargetPosition: W
+    - Source: Browser
+      Target: Route53
+      SourcePosition: E
       TargetPosition: W
       TargetArrowHead:
         Type: Open
       Type: orthogonal
       Labels:
-        TargetRight:
-          Title: "TLS"
-    - Source: CloudFrontDist
-      SourcePosition: S
-      Target: WebsiteBucket
-      TargetPosition: N
+        TargetLeft:
+          Title: "DNS"
+    - Source: Browser
+      Target: CloudFrontDist
+      SourcePosition: E
+      TargetPosition: W
       TargetArrowHead:
         Type: Open
       Type: orthogonal
       Labels:
         TargetLeft:
-          Title: "OAC"
-    - Source: ApiGateway
+          Title: "HTTPS"
+    - Source: Browser
+      Target: HCaptcha
       SourcePosition: E
+      TargetPosition: W
+      Type: orthogonal
+    - Source: HCaptcha
+      Target: Browser
+      SourcePosition: W
+      TargetPosition: E
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        TargetLeft:
+          Title: "token"
+    - Source: Browser
+      Target: ApiGateway
+      SourcePosition: E
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        TargetLeft:
+          Title: "POST"
+    - Source: ApiGateway
       Target: LambdaFunction
+      SourcePosition: E
       TargetPosition: W
       TargetArrowHead:
         Type: Open
@@ -106,11 +152,41 @@ Diagram:
       Type: orthogonal
       Labels:
         TargetLeft:
-          Title: "ses:SendEmail"
+          Title: "IAM Role · ses:SendEmail"
     - Source: LambdaFunction
-      SourcePosition: E
       Target: SimpleEmailService
+      SourcePosition: E
       TargetPosition: W
       TargetArrowHead:
         Type: Open
       Type: orthogonal
+    - Source: CloudFrontDist
+      SourcePosition: S
+      Target: S3
+      TargetPosition: N
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        TargetLeft:
+          Title: "OAC (sigv4)"
+    - Source: CloudFrontDist
+      SourcePosition: E
+      Target: ACMCertificate
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        TargetLeft:
+          Title: "TLS"
+    - Source: SimpleEmailService
+      Target: GoogleWorkspace
+      SourcePosition: E
+      TargetPosition: W
+      TargetArrowHead:
+        Type: Open
+      Type: orthogonal
+      Labels:
+        TargetLeft:
+          Title: "email"
