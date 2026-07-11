@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import time
 import urllib.request
 import urllib.parse
 from http import HTTPStatus
@@ -16,11 +15,14 @@ ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "")
 DOMAIN_NAME = os.environ.get("DOMAIN_NAME", "")
 ALLOW_CAPTCHA_BYPASS = os.environ.get("ALLOW_CAPTCHA_BYPASS", "") == "true"
 HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify"
+UPSTASH_REDIS_REST_URL = os.environ["UPSTASH_REDIS_REST_URL"]
+UPSTASH_REDIS_REST_TOKEN = os.environ["UPSTASH_REDIS_REST_TOKEN"]
+RATE_MAX = 5
+RATE_WINDOW = 300
 
 ses = boto3.client("ses")
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 PHONE_RE = re.compile(r"^[+]?[\d\s\-().]{6,20}$")
-rate_store = {}
 
 
 def _check_origin(headers):
@@ -36,14 +38,27 @@ def _check_origin(headers):
 
 
 def _rate_limit(ip):
-    now = time.time()
-    window = rate_store.get(ip, [])
-    window = [t for t in window if now - t < 60]
-    if len(window) >= 3:
-        return False
-    window.append(now)
-    rate_store[ip] = window
-    return True
+    key = f"rate:{ip}"
+    try:
+        incr_req = urllib.request.Request(
+            f"{UPSTASH_REDIS_REST_URL}/incr/{key}",
+            method="POST",
+            headers={"Authorization": f"Bearer {UPSTASH_REDIS_REST_TOKEN}"},
+        )
+        with urllib.request.urlopen(incr_req, timeout=1) as resp:
+            count = json.loads(resp.read()).get("result", 0)
+
+        expire_req = urllib.request.Request(
+            f"{UPSTASH_REDIS_REST_URL}/expire/{key}/{RATE_WINDOW}",
+            method="POST",
+            headers={"Authorization": f"Bearer {UPSTASH_REDIS_REST_TOKEN}"},
+        )
+        urllib.request.urlopen(expire_req, timeout=1)
+
+        return count <= RATE_MAX
+    except Exception:
+        print("Rate limit check failed")
+        return True
 
 
 def handler(event, context):

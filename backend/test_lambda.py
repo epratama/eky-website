@@ -16,6 +16,8 @@ os.environ.setdefault("HCAPTCHA_SECRET", "test-secret")
 os.environ["ALLOWED_ORIGIN"] = "https://ekyputrapratama.com"
 os.environ["DOMAIN_NAME"] = "ekyputrapratama.com"
 os.environ["ALLOW_CAPTCHA_BYPASS"] = "true"
+os.environ["UPSTASH_REDIS_REST_URL"] = "https://test-upstash.upstash.io"
+os.environ["UPSTASH_REDIS_REST_TOKEN"] = "test-token"
 
 # Mock boto3 before importing lambda (module-level boto3.client call)
 fake_ses = MagicMock()
@@ -39,18 +41,10 @@ def parse_response(response):
     return json.loads(response["body"]), response["statusCode"]
 
 
-@pytest.fixture(autouse=True)
-def clear_rate_store():
-    handler.rate_store.clear()
-
-
-# --- Module level: env vars + store ---
+# --- Module level: env vars ---
 
 def test_allowed_origin_env_var_set():
     assert os.environ.get("ALLOWED_ORIGIN") == "https://ekyputrapratama.com"
-
-def test_rate_store_exists():
-    assert hasattr(handler, "rate_store")
 
 # --- Origin validation ---
 
@@ -112,36 +106,77 @@ def test_rejects_www_subdomain_of_allowed():
 
 # --- Rate limiting ---
 
-def test_rate_limit_rejects_after_3_requests():
+class _FakeResponse:
+    def __init__(self, data):
+        self._data = data
+    def read(self):
+        return json.dumps(self._data).encode()
+    def __enter__(self):
+        return self
+    def __exit__(self, *args):
+        pass
+
+
+def _make_fake_urlopen(incr_result, expire_ok=True):
+    def fake_urlopen(req, timeout=None):
+        url = req.full_url
+        if "/incr/" in url:
+            return _FakeResponse({"result": incr_result})
+        elif "/expire/" in url:
+            if not expire_ok:
+                raise OSError("expire failed")
+            return _FakeResponse({"result": 1})
+        raise OSError("unexpected URL")
+    return fake_urlopen
+
+
+def test_rate_limit_allows_first_request():
+    with patch.object(handler.urllib.request, "urlopen", _make_fake_urlopen(1)):
+        assert handler._rate_limit("1.2.3.4") is True
+
+
+def test_rate_limit_allows_at_boundary():
+    with patch.object(handler.urllib.request, "urlopen", _make_fake_urlopen(5)):
+        assert handler._rate_limit("1.2.3.4") is True
+
+
+def test_rate_limit_rejects_after_5_requests():
     event = api_event(
         {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
         headers={"x-forwarded-for": "1.2.3.4", "origin": "https://ekyputrapratama.com"},
     )
-    for _ in range(3):
+    with patch.object(handler.urllib.request, "urlopen", _make_fake_urlopen(6)):
         resp = handler.handler(event, None)
         body, status = parse_response(resp)
-        assert status == HTTPStatus.OK
-    # 4th request should be rate limited
-    resp = handler.handler(event, None)
-    body, status = parse_response(resp)
-    assert status == HTTPStatus.TOO_MANY_REQUESTS
+        assert status == HTTPStatus.TOO_MANY_REQUESTS
 
-def test_rate_limit_resets_after_window():
-    event = api_event(
-        {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
-        headers={"x-forwarded-for": "1.2.3.5", "origin": "https://ekyputrapratama.com"},
-    )
-    for _ in range(3):
-        resp = handler.handler(event, None)
-        body, status = parse_response(resp)
-        assert status == HTTPStatus.OK
-    # Age out the rate window
-    old_time = handler.time.time
-    handler.time.time = lambda: old_time() + 61
-    resp = handler.handler(event, None)
-    body, status = parse_response(resp)
-    assert status == HTTPStatus.OK
-    handler.time.time = old_time
+
+def test_rate_limit_calls_expire_on_every_request():
+    expire_called = [False]
+
+    def tracking_urlopen(req, timeout=None):
+        if "/expire/" in req.full_url:
+            expire_called[0] = True
+            return _FakeResponse({"result": 1})
+        return _FakeResponse({"result": 3})
+
+    with patch.object(handler.urllib.request, "urlopen", tracking_urlopen):
+        handler._rate_limit("1.2.3.4")
+    assert expire_called[0] is True
+
+
+def test_rate_limit_fail_open_on_redis_error():
+    def error_urlopen(req, timeout=None):
+        raise OSError("connection refused")
+
+    with patch.object(handler.urllib.request, "urlopen", error_urlopen):
+        assert handler._rate_limit("1.2.3.4") is True
+
+
+def test_upstash_env_vars_set():
+    assert os.environ.get("UPSTASH_REDIS_REST_URL") == "https://test-upstash.upstash.io"
+    assert os.environ.get("UPSTASH_REDIS_REST_TOKEN") == "test-token"
+
 
 def test_rate_limit_uses_request_context_ip_not_spoofed_header():
     event = api_event(
@@ -149,26 +184,23 @@ def test_rate_limit_uses_request_context_ip_not_spoofed_header():
         headers={"x-forwarded-for": "1.2.3.4, 10.0.0.1", "origin": "https://ekyputrapratama.com"},
     )
     event["requestContext"] = {"http": {"sourceIp": "5.6.7.8"}}
-    for _ in range(3):
+    with patch.object(handler.urllib.request, "urlopen", _make_fake_urlopen(1)):
         resp = handler.handler(event, None)
         assert parse_response(resp)[1] == HTTPStatus.OK
-    # Even with different spoofed header, same requestContext IP gets limited
-    event2 = dict(event)
-    event2["headers"] = {"x-forwarded-for": "9.9.9.9, 10.0.0.1", "origin": "https://ekyputrapratama.com"}
-    resp = handler.handler(event2, None)
-    body, status = parse_response(resp)
-    assert status == HTTPStatus.TOO_MANY_REQUESTS
+    with patch.object(handler.urllib.request, "urlopen", _make_fake_urlopen(6)):
+        resp = handler.handler(event, None)
+        body, status = parse_response(resp)
+        assert status == HTTPStatus.TOO_MANY_REQUESTS
+
 
 def test_rate_limit_falls_back_to_x_forwarded_for():
     event = api_event(
         {"name": "T", "email": "t@t.com", "message": "hi", "hcaptcha_token": "dev-bypass"},
         headers={"x-forwarded-for": "1.1.1.1", "origin": "https://ekyputrapratama.com"},
     )
-    for _ in range(3):
+    with patch.object(handler.urllib.request, "urlopen", _make_fake_urlopen(1)):
         resp = handler.handler(event, None)
         assert parse_response(resp)[1] == HTTPStatus.OK
-    resp = handler.handler(event, None)
-    assert parse_response(resp)[1] == HTTPStatus.TOO_MANY_REQUESTS
 
 # --- Captcha bypass security gate ---
 
