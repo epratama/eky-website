@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { PlayCircle, PauseCircle, StopCircle, Loader2 } from 'lucide-react'
-import SectionTitle from './SectionTitle'
 
 const TRACK_URL =
   'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F2093689164&color=%232563EB&auto_play=true&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false'
@@ -64,14 +63,6 @@ export default function MusicPlayer() {
       setState('playing')
     }
 
-    script.onerror = () => {
-      setState('idle')
-      if (scriptRef.current && scriptRef.current.parentNode) {
-        scriptRef.current.parentNode.removeChild(scriptRef.current)
-      }
-      scriptRef.current = null
-    }
-
     document.head.appendChild(script)
   }, [state])
 
@@ -95,10 +86,9 @@ export default function MusicPlayer() {
     <section
       role="region"
       aria-label="Music player"
-      className="py-12 px-6 bg-white border-t-[3px] border-brutal-primary shadow-brutal"
+      className="py-12 px-6 bg-white border-t-[3px] border-brutal-primary"
     >
       <div className="mx-auto max-w-4xl flex flex-col items-center gap-4">
-        <SectionTitle title="Listen While You Browse" />
         <iframe
           ref={iframeRef}
           title="SoundCloud music player"

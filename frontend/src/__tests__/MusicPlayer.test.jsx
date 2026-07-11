@@ -131,7 +131,7 @@ describe('MusicPlayer — Phase 1', () => {
     expect(mockStop).toHaveBeenCalled()
   })
 
-  it('T7: play from paused state restarts track', () => {
+  it('T7: play from finished state restarts track', () => {
     const mockPlay = vi.fn()
     window.SC = {
       Widget: Object.assign(
