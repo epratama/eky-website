@@ -7,7 +7,6 @@ import Experience from './Experience'
 import Skills from './Skills'
 import Education from './Education'
 import ContactForm from './ContactForm'
-import MusicPlayer from './MusicPlayer'
 import BuildShowcase from './BuildShowcase'
 import Footer from './Footer'
 
@@ -22,7 +21,6 @@ export default function App() {
       <Skills skills={resume.skills} />
       <Education education={resume.education} certifications={resume.certifications} />
       <ContactForm />
-      <MusicPlayer />
       <BuildShowcase repo={resume.repo} />
       <Footer name={resume.name} role={resume.title} linkedin={resume.linkedin} github={resume.github} />
     </div>
