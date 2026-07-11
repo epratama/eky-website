@@ -57,6 +57,7 @@ def test_rejects_request_from_wrong_origin():
     body, status = parse_response(response)
     assert status == HTTPStatus.FORBIDDEN
     assert "Forbidden" in body.get("error", "")
+    assert body.get("code") == "CF_FORBIDDEN"
 
 def test_accepts_request_from_allowed_origin():
     event = api_event(
@@ -149,6 +150,7 @@ def test_rate_limit_rejects_after_5_requests():
         resp = handler.handler(event, None)
         body, status = parse_response(resp)
         assert status == HTTPStatus.TOO_MANY_REQUESTS
+    assert body.get("code") == "CF_RATE_LIMITED"
 
 
 def test_rate_limit_calls_expire_on_every_request():
@@ -200,6 +202,7 @@ def test_rate_limit_uses_request_context_ip_not_spoofed_header():
         resp = handler.handler(event, None)
         body, status = parse_response(resp)
         assert status == HTTPStatus.TOO_MANY_REQUESTS
+    assert body.get("code") == "CF_RATE_LIMITED"
 
 
 def test_rate_limit_falls_back_to_x_forwarded_for():
@@ -227,6 +230,7 @@ def test_dev_bypass_blocked_when_not_allowed():
     body, status = parse_response(response)
     assert status == HTTPStatus.BAD_REQUEST
     assert "Captcha verification failed" in body.get("error", "")
+    assert body.get("code") == "CF_CAPTCHA_FAILED"
     if prev is not None:
         os.environ["ALLOW_CAPTCHA_BYPASS"] = prev
 
@@ -257,6 +261,7 @@ def test_rejects_empty_name():
     body, status = parse_response(response)
     assert status == HTTPStatus.BAD_REQUEST
     assert "Name is required" in body.get("error", "")
+    assert body.get("code") == "CF_VALIDATION"
 
 def test_rejects_invalid_email():
     event = api_event(
@@ -267,6 +272,7 @@ def test_rejects_invalid_email():
     body, status = parse_response(response)
     assert status == HTTPStatus.BAD_REQUEST
     assert "Valid email" in body.get("error", "")
+    assert body.get("code") == "CF_VALIDATION"
 
 def test_rejects_empty_message():
     event = api_event(
@@ -277,6 +283,7 @@ def test_rejects_empty_message():
     body, status = parse_response(response)
     assert status == HTTPStatus.BAD_REQUEST
     assert "Message is required" in body.get("error", "")
+    assert body.get("code") == "CF_VALIDATION"
 
 def test_rejects_name_too_long():
     event = api_event(
@@ -287,6 +294,7 @@ def test_rejects_name_too_long():
     body, status = parse_response(response)
     assert status == HTTPStatus.BAD_REQUEST
     assert "Name too long" in body.get("error", "")
+    assert body.get("code") == "CF_VALIDATION"
 
 def test_rejects_email_too_long():
     event = api_event(
@@ -297,6 +305,7 @@ def test_rejects_email_too_long():
     body, status = parse_response(response)
     assert status == HTTPStatus.BAD_REQUEST
     assert "Email too long" in body.get("error", "")
+    assert body.get("code") == "CF_VALIDATION"
 
 def test_rejects_mobile_too_long():
     event = api_event(
@@ -307,6 +316,7 @@ def test_rejects_mobile_too_long():
     body, status = parse_response(response)
     assert status == HTTPStatus.BAD_REQUEST
     assert "Mobile too long" in body.get("error", "")
+    assert body.get("code") == "CF_VALIDATION"
 
 def test_rejects_message_too_long():
     event = api_event(
@@ -317,6 +327,7 @@ def test_rejects_message_too_long():
     body, status = parse_response(response)
     assert status == HTTPStatus.BAD_REQUEST
     assert "Message too long" in body.get("error", "")
+    assert body.get("code") == "CF_VALIDATION"
 
 def test_strips_crlf_from_mobile():
     event = api_event(
@@ -347,6 +358,7 @@ def test_rejects_mobile_with_letters():
     body, status = parse_response(response)
     assert status == HTTPStatus.BAD_REQUEST
     assert "Invalid mobile" in body.get("error", "")
+    assert body.get("code") == "CF_VALIDATION"
 
 def test_accepts_valid_mobile():
     event = api_event(

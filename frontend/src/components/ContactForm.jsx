@@ -4,6 +4,13 @@ import SectionTitle from './SectionTitle'
 
 const LAMBDA_URL = import.meta.env.VITE_LAMBDA_URL || ''
 
+const ERROR_MESSAGES = {
+  CF_RATE_LIMITED: "You're sending messages too quickly. Please wait a moment and try again.",
+  CF_FORBIDDEN: "This request could not be verified. Please use the official website.",
+  CF_CAPTCHA_FAILED: "Security check failed. Please try again.",
+  CF_DELIVERY_FAILED: "Something went wrong on our end. Please try again later.",
+}
+
 export default function ContactForm() {
   const [form, setForm] = useState({ name: '', email: '', mobile: '', message: '' })
   const [errors, setErrors] = useState({})
@@ -81,17 +88,22 @@ export default function ContactForm() {
           hcaptcha_token: import.meta.env.DEV ? (token || 'dev-bypass') : token,
         }),
       })
-
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error || 'Submission failed')
+        throw new Error(JSON.stringify({ message: body.error || 'Submission failed', code: body.code }))
       }
+
 
       setStatus('success')
     } catch (err) {
       setStatus('error')
+      let message = 'Something went wrong. Please try again.'
+      try {
+        const parsed = JSON.parse(err.message)
+        message = ERROR_MESSAGES[parsed.code] || parsed.message || message
+      } catch {}
       console.error('Contact form submission failed:', err)
-      setErrors({ form: 'Something went wrong. Please try again.' })
+      setErrors({ form: message })
     } finally {
       if (window.hcaptcha && captchaWidgetId.current !== null) {
         window.hcaptcha.reset(captchaWidgetId.current)

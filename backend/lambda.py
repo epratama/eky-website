@@ -71,15 +71,15 @@ def handler(event, context):
     )
 
     if not _rate_limit(source_ip):
-        return _error("Too many requests. Please wait.", HTTPStatus.TOO_MANY_REQUESTS)
+        return _error("Too many requests. Please wait.", HTTPStatus.TOO_MANY_REQUESTS, "CF_RATE_LIMITED")
 
     if not _check_origin(headers):
-        return _error("Forbidden", HTTPStatus.FORBIDDEN)
+        return _error("Forbidden", HTTPStatus.FORBIDDEN, "CF_FORBIDDEN")
 
     try:
         body = json.loads(event.get("body", "{}"))
     except json.JSONDecodeError:
-        return _error("Invalid JSON", HTTPStatus.BAD_REQUEST)
+        return _error("Invalid JSON", HTTPStatus.BAD_REQUEST, "CF_INVALID_REQUEST")
 
     name = (body.get("name") or "").strip()
     email = (body.get("email") or "").strip()
@@ -88,22 +88,22 @@ def handler(event, context):
     captcha_token = body.get("hcaptcha_token", "")
 
     if not name:
-        return _error("Name is required", HTTPStatus.BAD_REQUEST)
+        return _error("Name is required", HTTPStatus.BAD_REQUEST, "CF_VALIDATION")
     if not email or not EMAIL_RE.match(email):
-        return _error("Valid email is required", HTTPStatus.BAD_REQUEST)
+        return _error("Valid email is required", HTTPStatus.BAD_REQUEST, "CF_VALIDATION")
     if not message:
-        return _error("Message is required", HTTPStatus.BAD_REQUEST)
+        return _error("Message is required", HTTPStatus.BAD_REQUEST, "CF_VALIDATION")
 
     if len(name) > 200:
-        return _error("Name too long", HTTPStatus.BAD_REQUEST)
+        return _error("Name too long", HTTPStatus.BAD_REQUEST, "CF_VALIDATION")
     if len(email) > 254:
-        return _error("Email too long", HTTPStatus.BAD_REQUEST)
+        return _error("Email too long", HTTPStatus.BAD_REQUEST, "CF_VALIDATION")
     if len(mobile) > 50:
-        return _error("Mobile too long", HTTPStatus.BAD_REQUEST)
+        return _error("Mobile too long", HTTPStatus.BAD_REQUEST, "CF_VALIDATION")
     if mobile and not PHONE_RE.match(mobile):
-        return _error("Invalid mobile", HTTPStatus.BAD_REQUEST)
+        return _error("Invalid mobile", HTTPStatus.BAD_REQUEST, "CF_VALIDATION")
     if len(message) > 10000:
-        return _error("Message too long", HTTPStatus.BAD_REQUEST)
+        return _error("Message too long", HTTPStatus.BAD_REQUEST, "CF_VALIDATION")
 
     name = re.sub(r"[\r\n\t]", " ", name)
     if mobile:
@@ -116,7 +116,7 @@ def handler(event, context):
         req = urllib.request.Request(HCAPTCHA_VERIFY_URL, data=data, method="POST")
         with urllib.request.urlopen(req, timeout=10) as resp:
             if not json.loads(resp.read()).get("success"):
-                return _error("Captcha verification failed", HTTPStatus.BAD_REQUEST)
+                return _error("Captcha verification failed", HTTPStatus.BAD_REQUEST, "CF_CAPTCHA_FAILED")
 
     mobile_line = f"Mobile: {mobile}" if mobile else "Mobile: not provided"
     subject_domain = DOMAIN_NAME or "contact form"
@@ -154,6 +154,7 @@ def handler(event, context):
         return _error(
             "Failed to send message. Please try again later.",
             HTTPStatus.INTERNAL_SERVER_ERROR,
+            "CF_DELIVERY_FAILED",
         )
 
     return {
@@ -163,11 +164,11 @@ def handler(event, context):
     }
 
 
-def _error(message, status_code):
+def _error(message, status_code, code=""):
     return {
         "statusCode": status_code,
         "headers": _cors_headers(),
-        "body": json.dumps({"error": message}),
+        "body": json.dumps({"error": message, "code": code}),
     }
 
 
