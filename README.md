@@ -150,7 +150,7 @@ Structured how the AI agent authenticates to and provisions customer cloud infra
 
 - **AWS CLI as the control plane**: All infrastructure operations executed through authenticated AWS CLI commands via OpenCode's shell tool — no intermediate UI, direct API access.
 - **OAuth-based authentication**: IAM user credentials or console sign-in managed through `aws configure` / `aws login`. A pre-flight auth check (`check_aws_auth`) verifies the session before any user prompts.
-- **CloudFormation as the deployment contract**: Infrastructure defined declaratively in templates; the agent invokes `cloudformation deploy` as a single atomic operation rather than orchestrating individual create/update calls.
+- **CloudFormation as the deployment contract**: Infrastructure defined declaratively in templates; the agent invokes `update-stack` or `create-stack` with explicit lifecycle management rather than orchestrating individual create/update calls.
 - **`deploy.sh` as the automation boundary**: All multi-step workflows (SES setup, cert detection, DNS config) encapsulated in a versioned, mock-testable shell script — the agent invokes the script rather than composing raw CLI calls.
 
 ### Product Feedback Loop
@@ -272,7 +272,7 @@ Single command deploys everything:
 | **Interactive prompts** | Sender/recipient emails (prefilled from stack if exists), hCaptcha secret (hidden input), Upstash Redis URL + token (persisted to `.env`, prompted once), Google Analytics ID (optional, leave empty to skip). |
 | **SES email verification** | Checks if sender + recipient are verified in SES. If not: sends verification email, polls every 5s (up to 2.5 min) until confirmed. Declining aborts deploy. |
 | **ACM certificate** | Auto-searches for existing ISSUED cert in us-east-1. If found: reuses. If PENDING: shows DNS records and exits. If none: offers to request new, shows validation CNAMEs. |
-| **CloudFormation deploy** | Builds parameter overrides, runs `cloudformation deploy`. After deploy: verifies DomainName + CertificateArn were applied, warns if not. |
+| **CloudFormation deploy** | Builds parameter overrides, runs `update-stack` (or `create-stack` for new stacks). After deploy: verifies DomainName + CertificateArn were applied, warns if not. |
 | **Build + upload** | Runs `vite build` with API Gateway URL + hCaptcha site key + Analytics ID. Syncs `dist/` to S3 with `--delete`. Creates CloudFront invalidation. |
 | **Route53 DNS** | If custom domain configured: finds hosted zone, auto-creates ALIAS A records (root + www) pointing to CloudFront. Skips if already correct. |
 
