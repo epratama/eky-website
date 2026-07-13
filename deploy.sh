@@ -22,7 +22,9 @@ check_aws_auth() {
   [ "${SKIP_AWS_AUTH:-}" = "1" ] && return 0
   local PROFILE="${AWS_PROFILE:-default}"
   local PROFILE_FLAG=""
+  local REGION_FLAG=""
   [ "$PROFILE" != "default" ] && PROFILE_FLAG="--profile $PROFILE"
+  [ -n "${AWS_DEFAULT_REGION:-}" ] && REGION_FLAG="--region $AWS_DEFAULT_REGION"
 
   if aws sts get-caller-identity $PROFILE_FLAG --no-cli-pager > /dev/null 2>&1; then
     local ARN=$(aws sts get-caller-identity $PROFILE_FLAG --no-cli-pager --query 'Arn' --output text 2>/dev/null)
@@ -32,29 +34,25 @@ check_aws_auth() {
 
   echo ""
   echo "=== AWS authentication required ==="
-  local SSO_URL=$(aws configure get sso_start_url $PROFILE_FLAG 2>/dev/null || echo "")
-  if [ -n "$SSO_URL" ]; then
-    echo "SSO session expired. Opening browser for login..."
-    if aws sso login $PROFILE_FLAG --no-cli-pager 2>&1; then
-      echo "AWS SSO login successful."
-      return 0
-    fi
-    echo ""
-    echo "Browser didn't open? Run manually:"
-    echo "  aws sso login $PROFILE_FLAG"
-    echo "  SSO start URL: $SSO_URL"
+  local CLI_VERSION=$(aws --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+  if [ -n "$CLI_VERSION" ] && [ "$(printf '%s\n' "2.32.0" "$CLI_VERSION" | sort -V | head -1)" != "2.32.0" ]; then
+    echo "AWS CLI version $CLI_VERSION is too old. Upgrade to >= 2.32.0 for 'aws login' support."
+    echo "  brew upgrade awscli"
     exit 1
   fi
 
-  echo "No AWS credentials found. Set up authentication:"
+  echo "Opening browser for AWS console sign-in..."
+  if aws login $PROFILE_FLAG $REGION_FLAG --no-cli-pager 2>&1; then
+    echo "AWS login successful."
+    return 0
+  fi
+
   echo ""
-  echo "  For SSO:"
-  echo "    aws configure sso"
-  echo "    aws sso login"
+  echo "Browser didn't open? Try:"
+  echo "  aws login $PROFILE_FLAG $REGION_FLAG"
+  echo "  For headless/cross-device: aws login $PROFILE_FLAG --remote"
   echo ""
-  echo "  For IAM access key:"
-  echo "    aws configure"
-  echo ""
+  echo "Note: Your IAM user needs the SignInLocalDevelopmentAccess policy attached."
   exit 1
 }
 
