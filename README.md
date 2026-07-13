@@ -2,7 +2,7 @@
 
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
 command builds, provisions infrastructure, uploads, and configures DNS.
-78 tests across 4 suites. 14 AWS resources + Upstash Redis managed via CloudFormation.
+84 tests across 4 suites. 14 AWS resources + Upstash Redis managed via CloudFormation.
 SEO-optimized with OG/Twitter Cards, JSON-LD structured data for AI
 visibility (AEO/GEO), and social sharing previews.
  Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills & Tools Used](#skills--tools-used)).
@@ -70,7 +70,7 @@ template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
 | **Hosting** | S3 + CloudFront (HTTPS, HTTP/3, HTTP/2, compression) |
 | **DNS** | Route53 (ALIAS A, SPF TXT, DKIM CNAMEs, DMARC TXT, SES verification TXT, MAIL FROM MX) |
 | **IaC** | CloudFormation (14 resources, 8 parameters) |
-| **Testing** | Vitest + testing-library (15), pytest (33), bash mocks (13 deploy + 17 template) |
+| **Testing** | Vitest + testing-library (15), pytest (33), bash mocks (19 deploy + 17 template) |
 | **Design** | Neo-brutalism (ui-ux-pro-max design system) |
 | **Analytics** | Google Analytics 4 (GTM gtag.js, injected via `VITE_GTM_ID` at build time) |
 | **SEO & Social** | OG Cards, Twitter Cards, JSON-LD Person schema, robots.txt, canonical URL |
@@ -125,7 +125,7 @@ mock-testable components and infrastructure-as-code:
   Route53 DNS, frontend build, S3 upload, and CloudFront invalidation
 - **Idempotent operations** — skips already-configured resources (SES domain,
   Route53 records, cert)
-- **30 shell unit tests** using mocked AWS CLI verify every code path
+- **36 shell unit tests** using mocked AWS CLI verify every code path
 
 ### Agent Architecture
 
@@ -149,7 +149,7 @@ Designed secure connections between AWS services:
 Structured how the AI agent authenticates to and provisions customer cloud infrastructure:
 
 - **AWS CLI as the control plane**: All infrastructure operations executed through authenticated AWS CLI commands via OpenCode's shell tool — no intermediate UI, direct API access.
-- **OAuth-based authentication**: IAM user credentials or SSO tokens managed through `aws configure` / `aws sso login`. The agent never stores or handles secrets — they live in the host machine's credential chain.
+- **OAuth-based authentication**: IAM user credentials or console sign-in managed through `aws configure` / `aws login`. A pre-flight auth check (`check_aws_auth`) verifies the session before any user prompts.
 - **CloudFormation as the deployment contract**: Infrastructure defined declaratively in templates; the agent invokes `cloudformation deploy` as a single atomic operation rather than orchestrating individual create/update calls.
 - **`deploy.sh` as the automation boundary**: All multi-step workflows (SES setup, cert detection, DNS config) encapsulated in a versioned, mock-testable shell script — the agent invokes the script rather than composing raw CLI calls.
 
@@ -182,7 +182,7 @@ Identified technical friction points during development and built automated guar
 | **Skill invocation** | [`codeql-security-scan`](https://github.com/epratama/codeql-security-scan) | Community | Multi-language static analysis — 157 queries, 0 automated findings, 3 manual fixes ([report](security-report/codeql/2025-07-09-security-audit.md)) |
 | **Skill invocation** | [`checkov-iac-scan`](https://github.com/epratama/checkov-iac-scan) | Community | CloudFormation IaC audit — 22 passed, 0 critical/high, 10 informational ([report](security-report/checkov/summary-report.md)) |
 | **Bug diagnosis** | `systematic-debugging` | Superpowers | Debugged Lambda::Url block, DMARC alignment, JMESPath syntax, CF policy IDs, CSP hCaptcha blocking, template indentation crashes |
-| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 78 tests + lint before every completion claim |
+| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 84 tests + lint before every completion claim |
 | **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
 | **Code review response** | `receiving-code-review` | Superpowers | Security audit feedback: dev-bypass gating, CSP hardening, error message sanitization |
 | **Consortium audit** | `brainstorming` | Superpowers | 4-agent MoA audit (SEO/Security/Social/AEO) — validated design spec v1.1 before implementation |
@@ -200,9 +200,9 @@ Identified technical friction points during development and built automated guar
 |---|---|---|---|
 | **Frontend components** | JSX (Vitest) | 15 | `npm -C frontend test` |
 | **Lambda backend** | Python (pytest) | 33 | `python3 -m pytest backend/test_lambda.py -q` |
-| **Deploy script** | Bash (mocks) | 13 | `./test-deploy.sh` |
+| **Deploy script** | Bash (mocks) | 19 | `./test-deploy.sh` |
 | **CF template** | Bash (validation) | 17 | `./test-template.sh` |
-| **Total** | | **78** | |
+| **Total** | | **84** | |
 
 ### What the tests cover
 
@@ -214,7 +214,7 @@ Identified technical friction points during development and built automated guar
 | **Experience** | Descending chronological order (current role before internship) |
 | **Lambda validation** | Name/email/message required, max lengths, mobile format + CR/LF stripping, email format, JSON decode error |
 | **Lambda security** | Origin exact-matching, rate limit (5/5min via Upstash Redis REST, 429), fail-open on Redis error, Upstash env var presence, `CF_` error codes on all responses |
-| **Deploy flow** | Stack check, SES verify/decline/auto-verify, cert detect (issued/pending/none), cert request, Route53 DNS (skip/update/non-Route53) |
+| **Deploy flow** | AWS auth check (authenticated, `aws login`, expired session, CI/CD skip, profile), stack check, SES verify/decline/auto-verify, cert detect (issued/pending/none), cert request, Route53 DNS (skip/update/non-Route53) |
 | **CF template** | Syntax validation, key resources present, 8 parameters, secrets marked `NoEcho` |
 
 ---
@@ -234,6 +234,7 @@ the product.
 | [`robots-txt-fix`](docs/superpowers/specs/2026-07-11-robots-txt-fix-design.md) | AI crawler explicit Allow directives, Google-Extended opt-out resolution |
 | [`aws-architecture-diagram-v3`](docs/superpowers/specs/2026-07-11-aws-architecture-diagram-v3-design.md) | 11-node overlap-free L→R layout redesign |
 | [`rate-limit-redis`](docs/superpowers/specs/2026-07-11-rate-limit-redis-design.md) | Replace in-memory rate_store with Upstash Redis REST API (5/5min, fail open), `CF_` error codes |
+| [`aws-sso-auth-check`](docs/superpowers/specs/2026-07-12-aws-sso-auth-check-design.md) | Pre-flight `aws login` check in deploy.sh — browser-based SSO, CI/CD skip, profile support |
 
 ### Implementation Plans
 
@@ -242,6 +243,7 @@ the product.
 | [`resume-website`](docs/superpowers/plans/2025-07-09-resume-website.md) | Full-stack deployment: S3/CloudFront, Lambda contact form with hCaptcha, API Gateway, Route53 DNS, neo-brutalist CSS, 30 shell unit tests |
 | [`seo-social-sharing`](docs/superpowers/plans/2025-07-11-seo-social-sharing.md) | robots.txt, OG image generation, OG/Twitter/SEO meta tags, JSON-LD schema, security rescan, deploy |
 | [`rate-limit-redis`](docs/superpowers/plans/2026-07-11-rate-limit-redis.md) | Lambda code, CloudFormation template, deploy.sh prompts, 33 backend tests (TDD) |
+| [`aws-sso-auth-check`](docs/superpowers/plans/2026-07-12-aws-sso-auth-check.md) | deploy.sh auth function, 19 deploy tests, mock-based TDD |
 
 ### Security Reports
 
@@ -266,7 +268,7 @@ Single command deploys everything:
 
 | Phase | What happens |
 |---|---|
-| **Pre-flight** | Checks `aws`, `jq`, `npm` installed. Queries CloudFormation for existing stack config. |
+| **Pre-flight** | Checks `aws`, `jq`, `npm` installed. Verifies AWS authentication via `aws login` (console credentials, browser-based SSO). Queries CloudFormation for existing stack config. |
 | **Interactive prompts** | Sender/recipient emails (prefilled from stack if exists), hCaptcha secret (hidden input), Upstash Redis URL + token (persisted to `.env`, prompted once), Google Analytics ID (optional, leave empty to skip). |
 | **SES email verification** | Checks if sender + recipient are verified in SES. If not: sends verification email, polls every 5s (up to 2.5 min) until confirmed. Declining aborts deploy. |
 | **ACM certificate** | Auto-searches for existing ISSUED cert in us-east-1. If found: reuses. If PENDING: shows DNS records and exits. If none: offers to request new, shows validation CNAMEs. |
