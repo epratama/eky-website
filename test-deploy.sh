@@ -84,6 +84,24 @@ JSONEOF
   set-identity-mail-from-domain)
     echo ""
     ;;
+  get-caller-identity)
+    echo "$MOCK_STS_OUTPUT"
+    [ "$MOCK_STS_EXIT" = "fail" ] && exit 1 || exit 0
+    ;;
+  login)
+    if [ "$MOCK_SSO_EXIT" = "fail" ]; then
+      echo "SSO login failed" >&2
+      exit 1
+    fi
+    echo "SSO login successful" >&2
+    exit 0
+    ;;
+  get)
+    if echo "$*" | grep -q "sso_start_url"; then
+      echo "${MOCK_SSO_URL:-}"
+    fi
+    exit 0
+    ;;
   *) exit 0 ;; 
 esac
 MOCK
@@ -114,6 +132,10 @@ set_mock_defaults() {
   export MOCK_ROOT_DNS=""
   export MOCK_WWW_DNS=""
   export MOCK_SES_STATUS="Success"
+  export MOCK_STS_OUTPUT=""
+  export MOCK_STS_EXIT="success"
+  export MOCK_SSO_EXIT="success"
+  export MOCK_SSO_URL=""
 }
 
 # --- Tests ---
@@ -368,6 +390,157 @@ else
 fi
 rm -rf "$MOCK_DIR" 2>/dev/null || true
 rm -f /tmp/mock-ses-polled
+trap - EXIT
+
+# --- AWS Auth Check Tests ---
+
+# Test 14: SKIP_AWS_AUTH=1
+echo ""
+echo "--- SKIP_AWS_AUTH=1 ---"
+setup_mock_env
+set_mock_defaults
+export SKIP_AWS_AUTH=1
+export MOCK_DOMAIN=""  # skip domain prompts
+if output=$(printf 's@t.com\nr@t.com\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "authenticated"; then
+    red "should skip auth" "auth check ran"
+  else
+    green "skips auth check when SKIP_AWS_AUTH=1"
+  fi
+else
+  red "deploy failed" "$output"
+fi
+unset SKIP_AWS_AUTH
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 15: Already authenticated
+echo ""
+echo "--- Already authenticated ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_STS_EXIT="success"
+export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
+export MOCK_DOMAIN=""
+if output=$(printf 's@t.com\nr@t.com\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "authenticated as"; then
+    green "prints authenticated message"
+  else
+    red "no auth message" "$output"
+  fi
+else
+  red "deploy failed" "$output"
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 16: SSO login succeeds
+echo ""
+echo "--- SSO login succeeds ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_STS_EXIT="fail"
+export MOCK_SSO_URL="https://test.awsapps.com/start"
+export MOCK_SSO_EXIT="success"
+export MOCK_DOMAIN=""
+if output=$(printf 's@t.com\nr@t.com\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "SSO login successful"; then
+    green "SSO login succeeds, deploy continues"
+  else
+    red "SSO success not detected" "$output"
+  fi
+else
+  status=$?
+  if [ $status -eq 1 ] && echo "$output" | grep -q "SSO"; then
+    red "SSO login should succeed" "$output"
+  else
+    red "deploy failed" "$output"
+  fi
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 17: SSO login fails — manual fallback
+echo ""
+echo "--- SSO login fails ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_STS_EXIT="fail"
+export MOCK_SSO_URL="https://test.awsapps.com/start"
+export MOCK_SSO_EXIT="fail"
+export MOCK_DOMAIN=""
+if output=$(printf 's@t.com\nr@t.com\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  red "should exit 1" "exited 0"
+else
+  status=$?
+  if [ $status -eq 1 ] && echo "$output" | grep -q "Browser didn't open"; then
+    green "shows manual login instructions"
+  else
+    red "wrong message" "$output"
+  fi
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 18: No AWS config — setup guide
+echo ""
+echo "--- No AWS config ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_STS_EXIT="fail"
+export MOCK_SSO_URL=""
+export MOCK_DOMAIN=""
+if output=$(printf 's@t.com\nr@t.com\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  red "should exit 1" "exited 0"
+else
+  status=$?
+  if [ $status -eq 1 ] && echo "$output" | grep -q "aws configure"; then
+    green "shows setup guide (both SSO and IAM)"
+  else
+    red "wrong message" "$output"
+  fi
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 19: AWS_PROFILE respected
+echo ""
+echo "--- AWS_PROFILE respected ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_STS_EXIT="fail"
+export MOCK_SSO_URL="https://test.awsapps.com/start"
+export MOCK_SSO_EXIT="success"
+export MOCK_DOMAIN=""
+export AWS_PROFILE="myprofile"
+if output=$(printf 's@t.com\nr@t.com\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  green "deploy continues with profile"
+else
+  red "deploy failed" "$output"
+fi
+unset AWS_PROFILE
+rm -rf "$MOCK_DIR" 2>/dev/null || true
+trap - EXIT
+
+# Test 20: IAM creds — no SSO suggestion
+echo ""
+echo "--- IAM creds skip SSO ---"
+setup_mock_env
+set_mock_defaults
+export MOCK_STS_EXIT="success"
+export MOCK_SSO_URL="https://test.awsapps.com/start"  # SSO configured
+export MOCK_CERT_LIST=$'arn:aws:acm:us-east-1:123:cert/abc\tISSUED'
+export MOCK_DOMAIN=""
+if output=$(printf 's@t.com\nr@t.com\n\n\n' | bash "$DEPLOY_SCRIPT" test-stack 2>&1); then
+  if echo "$output" | grep -q "authenticated as" && ! echo "$output" | grep -q "SSO"; then
+    green "authenticated, skips SSO suggestion"
+  else
+    red "SSO suggested for IAM user" "$output"
+  fi
+else
+  red "deploy failed" "$output"
+fi
+rm -rf "$MOCK_DIR" 2>/dev/null || true
 trap - EXIT
 
 echo ""
