@@ -6,7 +6,7 @@ export default function BuildShowcase({ repo }) {
   const { ref, isVisible } = useScrollReveal()
 
   return (
-    <section id="showcase" className="py-20 px-6 bg-white border-y-[3px] border-brutal-primary">
+    <section id="showcase" className="py-20 px-6 bg-white border-t-[3px] border-brutal-primary">
       <div className="mx-auto max-w-4xl">
         <SectionTitle number="05" title="How This Site Was Built" />
 

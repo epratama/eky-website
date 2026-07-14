@@ -83,7 +83,7 @@ describe('App', () => {
   it('renders BuildShowcase section with top and bottom border divider', () => {
     render(<App />)
     const section = document.getElementById('showcase')
-    expect(section.className).toMatch(/border-y-\[3px\]/)
+    expect(section.className).toMatch(/border-t-\[3px\]/)
     expect(section.className).toMatch(/border-brutal-primary/)
   })
 
