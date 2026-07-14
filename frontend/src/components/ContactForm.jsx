@@ -140,7 +140,7 @@ export default function ContactForm() {
   return (
     <section id="contact" className="py-20 px-6 bg-white border-t-[3px] border-brutal-primary">
       <div className="mx-auto max-w-xl">
-        <SectionTitle number="06" title="Get in Touch" />
+        <SectionTitle number="08" title="Get in Touch" />
 
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <div>

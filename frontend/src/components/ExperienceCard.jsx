@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useScrollReveal } from '../hooks/useScrollReveal'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 
 export default function ExperienceCard({ role }) {
   const [expanded, setExpanded] = useState(false)
@@ -37,10 +37,13 @@ export default function ExperienceCard({ role }) {
 
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 font-body text-sm font-bold text-brutal-accent hover:text-brutal-primary cursor-pointer transition-colors duration-150"
+          className={`group inline-flex items-center gap-2 border-[3px] border-brutal-accent px-4 py-2 font-body text-sm font-bold text-brutal-accent cursor-pointer transition-all duration-200 hover:bg-brutal-accent hover:text-brutal-bg ${isVisible && !expanded ? 'animate-glow-ring' : ''}`}
           aria-expanded={expanded}
         >
-          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          <ChevronDown
+            size={16}
+            className={`transition-transform duration-300 ${expanded ? 'rotate-180' : 'group-hover:translate-y-0.5'}`}
+          />
           {expanded ? 'Show less' : `Show highlights (${role.highlights?.length ?? 0})`}
         </button>
 

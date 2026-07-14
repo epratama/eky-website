@@ -18,10 +18,10 @@ export default function App() {
       <Summary summary={resume.summary} />
       <KeyAchievements achievements={resume.keyAchievements} />
       <Experience experience={resume.experience} />
+      <BuildShowcase repo={resume.repo} />
       <Skills skills={resume.skills} />
       <Education education={resume.education} certifications={resume.certifications} />
       <ContactForm />
-      <BuildShowcase repo={resume.repo} />
       <Footer name={resume.name} role={resume.title} linkedin={resume.linkedin} github={resume.github} />
     </div>
   )

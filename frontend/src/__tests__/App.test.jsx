@@ -55,10 +55,29 @@ describe('App', () => {
     expect(repoLink).toHaveAttribute('href', 'https://github.com/epratama/eky-website')
   })
 
-  it('renders the build showcase section', () => {
+  it('renders the build showcase section with new copy', () => {
     render(<App />)
-    expect(screen.getByText('Want to know how this site was built?')).toBeInTheDocument()
+    expect(screen.getByText(/Multi-Agent AI/i)).toBeInTheDocument()
+    expect(screen.getByText(/See how it's done/i)).toBeInTheDocument()
     expect(screen.getByText('See the code on GitHub →')).toBeInTheDocument()
+  })
+
+  it('renders BuildShowcase between Experience and Skills', () => {
+    render(<App />)
+    const sections = Array.from(document.querySelectorAll('section[id]'))
+    const showcaseIdx = sections.findIndex(s => s.id === 'showcase')
+    const experienceIdx = sections.findIndex(s => s.id === 'experience')
+    const skillsIdx = sections.findIndex(s => s.id === 'skills')
+    expect(showcaseIdx).toBeGreaterThan(experienceIdx)
+    expect(showcaseIdx).toBeLessThan(skillsIdx)
+  })
+
+  it('renders ExperienceCard highlights button with bordered pill style', () => {
+    render(<App />)
+    const buttons = screen.getAllByRole('button', { name: /show highlights/i })
+    expect(buttons.length).toBeGreaterThan(0)
+    expect(buttons[0].className).toMatch(/border-\[3px\]/)
+    expect(buttons[0].className).toMatch(/border-brutal-accent/)
   })
 
   it('CSP allows favicon data URI, hCaptcha, API Gateway, and Google Analytics connections', () => {
