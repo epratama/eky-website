@@ -2,7 +2,7 @@
 
 Single-page neo-brutalist portfolio website. Fully automated deployment — one
 command builds, provisions infrastructure, uploads, and configures DNS.
-84 tests across 4 suites. 14 AWS resources + Upstash Redis managed via CloudFormation.
+87 tests across 4 suites. 14 AWS resources + Upstash Redis managed via CloudFormation.
 SEO-optimized with OG/Twitter Cards, JSON-LD structured data for AI
 visibility (AEO/GEO), and social sharing previews.
  Built through structured AI-driven development — [design spec](docs/superpowers/specs/2025-07-09-resume-website-design.md) → [implementation plan](docs/superpowers/plans/2025-07-09-resume-website.md) → TDD → parallel subagent execution → verification gates — using **OpenCode** with the **Superpowers** skill system (see [Skills & Tools Used](#skills--tools-used)).
@@ -70,7 +70,7 @@ template ([`infrastructure/template.yaml`](infrastructure/template.yaml)):
 | **Hosting** | S3 + CloudFront (HTTPS, HTTP/3, HTTP/2, compression) |
 | **DNS** | Route53 (ALIAS A, SPF TXT, DKIM CNAMEs, DMARC TXT, SES verification TXT, MAIL FROM MX) |
 | **IaC** | CloudFormation (14 resources, 8 parameters) |
-| **Testing** | Vitest + testing-library (15), pytest (33), bash mocks (19 deploy + 17 template) |
+| **Testing** | Vitest + testing-library (18), pytest (33), bash mocks (19 deploy + 17 template) |
 | **Design** | Neo-brutalism (ui-ux-pro-max design system) |
 | **Analytics** | Google Analytics 4 (GTM gtag.js, injected via `VITE_GTM_ID` at build time) |
 | **SEO & Social** | OG Cards, Twitter Cards, JSON-LD Person schema, robots.txt, canonical URL |
@@ -182,7 +182,7 @@ Identified technical friction points during development and built automated guar
 | **Skill invocation** | [`codeql-security-scan`](https://github.com/epratama/codeql-security-scan) | Community | Multi-language static analysis — 157 queries, 0 automated findings, 3 manual fixes ([report](security-report/codeql/2025-07-09-security-audit.md)) |
 | **Skill invocation** | [`checkov-iac-scan`](https://github.com/epratama/checkov-iac-scan) | Community | CloudFormation IaC audit — 22 passed, 0 critical/high, 10 informational ([report](security-report/checkov/summary-report.md)) |
 | **Bug diagnosis** | `systematic-debugging` | Superpowers | Debugged Lambda::Url block, DMARC alignment, JMESPath syntax, CF policy IDs, CSP hCaptcha blocking, template indentation crashes |
-| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 84 tests + lint before every completion claim |
+| **Quality gate** | `verification-before-completion` | Superpowers | Ran all 87 tests + lint before every completion claim |
 | **Peer review** | `requesting-code-review` | Superpowers | Cross-checked work at task completion boundaries |
 | **Code review response** | `receiving-code-review` | Superpowers | Security audit feedback: dev-bypass gating, CSP hardening, error message sanitization |
 | **Consortium audit** | `brainstorming` | Superpowers | 4-agent MoA audit (SEO/Security/Social/AEO) — validated design spec v1.1 before implementation |
@@ -198,11 +198,11 @@ Identified technical friction points during development and built automated guar
 
 | Suite | Language | Tests | Command |
 |---|---|---|---|
-| **Frontend components** | JSX (Vitest) | 15 | `npm -C frontend test` |
+| **Frontend components** | JSX (Vitest) | 18 | `npm -C frontend test` |
 | **Lambda backend** | Python (pytest) | 33 | `python3 -m pytest backend/test_lambda.py -q` |
 | **Deploy script** | Bash (mocks) | 19 | `./test-deploy.sh` |
 | **CF template** | Bash (validation) | 17 | `./test-template.sh` |
-| **Total** | | **84** | |
+| **Total** | | **87** | |
 
 ### What the tests cover
 
@@ -235,6 +235,7 @@ the product.
 | [`aws-architecture-diagram-v3`](docs/superpowers/specs/2026-07-11-aws-architecture-diagram-v3-design.md) | 11-node overlap-free L→R layout redesign |
 | [`rate-limit-redis`](docs/superpowers/specs/2026-07-11-rate-limit-redis-design.md) | Replace in-memory rate_store with Upstash Redis REST API (5/5min, fail open), `CF_` error codes |
 | [`aws-sso-auth-check`](docs/superpowers/specs/2026-07-12-aws-sso-auth-check-design.md) | Pre-flight `aws login` check in deploy.sh — browser-based SSO, CI/CD skip, profile support |
+| [`build-showcase-redesign`](docs/superpowers/specs/2026-07-12-build-showcase-redesign.md) | BuildShowcase repositioning (07→05), Multi-Agent AI copy, glow-ring animations, bordered pill buttons |
 
 ### Implementation Plans
 
@@ -244,6 +245,7 @@ the product.
 | [`seo-social-sharing`](docs/superpowers/plans/2025-07-11-seo-social-sharing.md) | robots.txt, OG image generation, OG/Twitter/SEO meta tags, JSON-LD schema, security rescan, deploy |
 | [`rate-limit-redis`](docs/superpowers/plans/2026-07-11-rate-limit-redis.md) | Lambda code, CloudFormation template, deploy.sh prompts, 33 backend tests (TDD) |
 | [`aws-sso-auth-check`](docs/superpowers/plans/2026-07-12-aws-sso-auth-check.md) | deploy.sh auth function, 19 deploy tests, mock-based TDD |
+| [`build-showcase-redesign`](docs/superpowers/plans/2026-07-12-build-showcase-redesign.md) | BuildShowcase + ExperienceCard components, CSS animations, section reordering, 18 frontend tests (TDD) |
 
 ### Security Reports
 
