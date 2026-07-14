@@ -6,7 +6,7 @@ export default function BuildShowcase({ repo }) {
   const { ref, isVisible } = useScrollReveal()
 
   return (
-    <section id="showcase" className="py-20 px-6">
+    <section id="showcase" className="py-20 px-6 bg-white border-y-[3px] border-brutal-primary">
       <div className="mx-auto max-w-4xl">
         <SectionTitle number="05" title="How This Site Was Built" />
 
@@ -19,7 +19,7 @@ export default function BuildShowcase({ repo }) {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-3">
               <p className="font-body text-base md:text-lg font-medium text-brutal-primary leading-relaxed">
-                Built through <span className="font-bold text-brutal-accent">Multi-Agent AI Orchestration</span> — with production engineering and security standards.
+                Built through <span className="font-bold text-brutal-accent">Multi-Agent AI Orchestration</span> — with production software engineering and security best practices.
               </p>
               <p className="font-body text-sm text-brutal-muted">
                 See how it's done →

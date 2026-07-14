@@ -80,6 +80,13 @@ describe('App', () => {
     expect(buttons[0].className).toMatch(/border-brutal-accent/)
   })
 
+  it('renders BuildShowcase section with top and bottom border divider', () => {
+    render(<App />)
+    const section = document.getElementById('showcase')
+    expect(section.className).toMatch(/border-y-\[3px\]/)
+    expect(section.className).toMatch(/border-brutal-primary/)
+  })
+
   it('CSP allows favicon data URI, hCaptcha, API Gateway, and Google Analytics connections', () => {
     const csp = getCspMetaContent()
     expect(csp).toContain("img-src 'self' data:")
